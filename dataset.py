@@ -1,27 +1,29 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
-import PIL.Image as Image
 from torchvision.datasets.utils import download_url
-from torch.utils.data import Dataset, DataLoader, Subset
+#import pytesseract
+import cv2
 
 NHMD_DATA_URL = 'https://specify-attachments.science.ku.dk/static/NHMD_Botany/originals/'
 DATA_ROOT = './data'
-NHMD_DATASET_CSV = './NHMD_dataset.csv'
+NHMD_ORIG = 'NHMD_ORIG'
+NHMD_BBOX = 'NHMD_BBOX'
+NHMD_DATASET_CSV = 'NHMD_dataset.csv'
+SEL_DATASET_CSV = 'info.csv'
 year_col = '1,10.collectingevent.startDateNumericYear'
 catalog_col = '1.collectionobject.catalogNumber'
 url_col = '1,111-collectionobjectattachments,41.attachment.attachmentLocation'
 
 
-def download_images(selected_df, url=NHMD_DATA_URL, force_update=False, location='NHMD_ORIG', root=DATA_ROOT):
-    data_folder = os.path.join(root, location)
-    if (force_update or not os.path.exists(data_folder)):
-        os.makedirs(data_folder)
-        selected_df.to_csv(data_folder + '/info.csv')
+def download_images(selected_df, path, url=NHMD_DATA_URL, force_update=False):
+    if (force_update or not os.path.exists(path)):
+        os.makedirs(path)
+        selected_df.to_csv(path + SEL_DATASET_CSV)
         imgs = selected_df[url_col]
         for img in imgs:
-            download_url(url+img, data_folder)
-    os.listdir(data_folder)
+            download_url(url+img, path)
 
 def read_and_clean_dataset(csv_path=NHMD_DATASET_CSV):
     df = pd.read_csv(csv_path)
@@ -64,10 +66,50 @@ def year_stratified_split(dataset, lower_bound=1799, upper_bound=1950, group_siz
         selected_data = selected_data + list(random_samples)
     return dataset.filter(items = selected_data, axis=0)
 
-if __name__ == '__main__':
-    orig_df, valid_df = read_and_clean_dataset()
-    # analyse_dataset(orig_df, valid_df)
-    selected_df = year_stratified_split(valid_df)
-    download_images(selected_df)
-    
+def get_sorted_contours(img):
+    contours = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = contours[0] if len(contours)==2 else contours[1]
+    contours = sorted(contours, key=lambda x: cv2.boundingRect(x)[0])
+    return contours
 
+def add_bbox(imageset_df, in_path, out_path):
+    img_names = imageset_df[url_col]
+    img_name = 'sp622660014736117175.att.jpg'
+    img_to_read = os.path.join(in_path, img_name)
+    image = cv2.imread(img_to_read)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (7,7), 0)    
+    (_,thresh) = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    struct_el = cv2.getStructuringElement(cv2.MORPH_RECT, (60,60))
+    dilated = cv2.dilate(thresh, struct_el, iterations=1)
+    if (not os.path.exists(out_path)):
+        os.makedirs(out_path)
+    cv2.imwrite(out_path+'/dilated.png', dilated)
+    contours = get_sorted_contours(dilated)
+    for c in contours:
+        x,y,w,h = cv2.boundingRect(c)
+        if h < 2500 and h > 100:
+            cv2.rectangle(image, (x,y), (x+w, y+h),(0, 0, 255), 2)
+    cv2.imwrite(out_path+'/bboxed.png', image)
+                
+def gen_datasets(force_update):
+    sel_img_data_path = os.path.join(DATA_ROOT, NHMD_ORIG)
+    sel_img_df_path = os.path.join(sel_img_data_path, SEL_DATASET_CSV)
+    selected_df = None
+    orig_df, valid_df = read_and_clean_dataset()
+    analyse_dataset(orig_df, valid_df)
+    # Check if images were already downloaded
+    if (force_update==True or not os.path.exists(sel_img_df_path)):
+        orig_df, valid_df = read_and_clean_dataset()
+        analyse_dataset(orig_df, valid_df)
+        selected_df = year_stratified_split(valid_df)
+        download_images(selected_df, sel_img_data_path)
+    else:
+        selected_df = pd.read_csv(sel_img_df_path)
+    # Extract text regions
+    bbox_img_path = os.path.join(DATA_ROOT, NHMD_BBOX) 
+    add_bbox(selected_df, sel_img_data_path, bbox_img_path)
+
+
+if __name__ == '__main__':
+    gen_datasets(sys.argv[1])
