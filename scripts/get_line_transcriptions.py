@@ -1,0 +1,48 @@
+import os
+import pandas as pd
+
+transcription_file = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM/generate-test.txt"
+gt_file = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/data/gt_test.txt'
+output_folder = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM'
+
+def gen_numerated_mappings():
+    mappings = []
+    with open(gt_file) as f:
+        lines = f.readlines()
+        for line in lines:
+            # print(line.split('\t')[0].split('.')[0]+".att.txt")
+            mappings.append(line.split('\t')[0].split('.')[0]+".att.txt")
+    return mappings
+
+def extract_lines_to_files(mappings):
+    with open(transcription_file) as f:
+        lines = f.readlines()
+        start = True
+        file = ''
+        final_res = ''
+        for line in lines:
+            if line.startswith("D-"):
+                line_segs = line.split('\t')
+                id = int(line_segs[0][2:])
+                result = line.split("\t")[2]
+                if not start and file == mappings[id]:
+                    final_res += result
+                elif start:
+                    file = mappings[id]
+                    final_res += result
+                    start = False
+                else:
+                    output_path = os.path.join(output_folder, file)
+                    with open(output_path, "w") as o:
+                        o.write(final_res)
+                    final_res=''
+                    final_res += result
+                    file = mappings[id]
+            if line.startswith("Generate test with beam=10: CER: 28.84"):
+                output_path = os.path.join(output_folder, file)
+                with open(output_path, "w") as o:
+                    o.write(final_res)
+
+if __name__ == '__main__':
+    mappings=gen_numerated_mappings()
+    extract_lines_to_files(mappings)
