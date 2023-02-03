@@ -1,9 +1,9 @@
 import os
 import pandas as pd
 
-transcription_file = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM/generate-test.txt"
+transcription_file = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM_BASE/generate-test.txt"
 gt_file = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/data/gt_test.txt'
-output_folder = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM'
+output_folder = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM_BASE'
 
 def gen_numerated_mappings():
     mappings = []
@@ -38,7 +38,7 @@ def extract_lines_to_files(mappings):
                     final_res=''
                     final_res += result
                     file = mappings[id]
-            if line.startswith("Generate test with beam=10: CER: 28.84"):
+            if line.startswith("Generate test with beam=10:"):
                 output_path = os.path.join(output_folder, file)
                 with open(output_path, "w") as o:
                     o.write(final_res)

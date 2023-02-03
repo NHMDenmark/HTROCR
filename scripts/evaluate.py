@@ -4,7 +4,7 @@ import os
 import math
 import numpy as np
 
-RESULTS_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results'
+RESULTS_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/single_line_results'
 GT_DIR = 'NHMD_GT'
 
 def get_scores(data_dir):
@@ -17,9 +17,9 @@ def get_scores(data_dir):
         file_path = os.path.join(dir_loc, file)
         gt_path = os.path.join(RESULTS_DIR, GT_DIR, file)
         with open(file_path) as r:
-            output = r.readlines()
+            output = r.read()
         with open(gt_path) as r:
-            gt_transcriptions = r.readlines()
+            gt_transcriptions = r.read()
         c = np.clip(float(cer(output, gt_transcriptions).numpy()), 0.0, 1.0)
         w = np.clip(float(wer(output, gt_transcriptions).numpy()), 0.0, 1.0)
         # Handling the case where no text was transcribed at all
@@ -62,7 +62,7 @@ def evaluate_model(args):
         response += gen_response(cer_bbox, wer_bbox, cer_orig, wer_orig)
     
     if args.trocr or args.all:
-        cer, wer = get_scores("TROCR_NHMD_LINES_IAM")
+        cer, wer = get_scores("TROCR_NHMD_LINES_IAM_BASE")
         response += '===== TrOCR =====\n'
         response += 'LINE CER: {}\nLINE WER: {}\n'.format(cer, wer)
     

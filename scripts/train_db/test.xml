@@ -1,0 +1,163 @@
+<text xmlns="http://www.tei-c.org/ns/1.0"
+    xmlns:HIS="http://www.example.org/ns/HIS" rend="letter" corresp="B18500105OS" xml:lang="da-no">
+    <body>
+        <div type="letter">
+            <div type="letterpart" part="I">
+                <dateline>
+                    <pb n="[1]"/>
+Grimstad den
+                    <date>
+5
+                        <hi rend="raised">te</hi>
+Januar 1850
+                    </date>
+.
+                </dateline>
+                <salute>Min kjære Ven!</salute>
+                <p>
+Gjennem din sidste Skrivelse har jeg modtaget
+                    <anchor type="lemma" xml:id="koB12_32"/>
+«Catilinas» Dødsdom, – det gjør mig ondt, men det kan ikke nytte at tabe Modet. Du har virkelig Ret i at dette tilsyneladende Nederlag i Grunden ikke er at betragte som et Saadant.
+                    <HIS:hisRef type="work" target="Navneregister_HISe.xml#woC1">
+                        <anchor type="lemma" xml:id="koB12_33"/>
+C.
+                    </HIS:hisRef>
+var jo
+                    <anchor type="lemma" xml:id="koB12_34"/>
+kuns bestemt til at være en Forløber for
+                    <anchor type="lemma" xml:id="koB12_35"/>
+de Planer vi i denne Retning have aftalt, og den kan endnu ligefuldt opfylde sin Bestemmelse. Jeg er ganske af samme Mening som du, nemlig at det er rigtigst at sælge Stykket, og jeg troer at Stykkets Afviisning, ifølge
+                    <anchor type="lemma" xml:id="koB12_36"/>
+Directionens Skrivelse snarere vil gavne end skade, da det ikke synes som om Mangel paa indre Gehalt har bevirket at det ikke blev antaget. Salget af Stykket afhandler du naturligviis efter eget
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_24" target="B1844-1871ht_noter.xml" corresp="noteT12_24">Forgodtbefindende</HIS:hisRef>
+, kuns vil jeg bemærke at det forekommer mig bedre at sælge Forlagsretten end at lade det trykke paa eget Forlag, da vi i sidste Tilfælde baade maatte rykke ud med en Deel Penge, forat bestride Trykningen, og desuden
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_25" target="B1844-1871ht_noter.xml" corresp="noteT12_25">først</HIS:hisRef>
+lidt efter lidt vilde komme i Besiddelse af Indtægten, medens vi i første Tilfælde kuns havde at modtage Honoraret, – dog, dette maa lempes efter Omstændighederne. – Nu lidt om min litterære Virksomhed. Af
+                    <anchor type="lemma" xml:id="koB12_37"/>
+Olaf T. er som jeg nok før har sagt, omtrentlig første Act ferdig; det lille Eenactsstykke
+                    <anchor type="lemma" xml:id="koB12_38"/>
+«Normannerne» er omarbeidet, eller rettere, skal
+                    <pb n="[2]"/>
+omarbeides, hvilket jeg fortiden beskjæftiger mig med, og vil i sin nye Skikkelse fremtræde som
+                    <anchor type="lemma" xml:id="koB12_39"/>
+Iklædning for en mere udvidet Idee, end den for hvilken det oprindelig var bestemt. Et Par Sagn og Skildringer fra
+                    <HIS:hisRef type="place" target="Navneregister_HISe.xml#plTel">Thelemarken</HIS:hisRef>
+har jeg benyttet til
+                    <anchor type="lemma" xml:id="koB12_40"/>
+nogle mindre Digte, afpassede efter bekjendte Folkemelodier, og har saaledes ogsaa forsøgt mig i national
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_26" target="B1844-1871ht_noter.xml" corresp="noteT12_26">Retning.</HIS:hisRef>
+Ligeledes har jeg halv fuldført en større, maaskee noget overspændt Digtning, betitlet
+                    <HIS:hisRef type="work" target="Navneregister_HISe.xml#woBalm">
+                        <anchor type="lemma" xml:id="koB12_41"/>
+«Balminder»
+                    </HIS:hisRef>
+der skylder
+                    <anchor type="lemma" xml:id="koB12_42"/>
+min indbildte Forlibelse fra isommer sin Tilværelse. Men hvad der egentlig maa kaldes mit Hovedværk siden din Bortreise er en nationalhistorisk Novelle som jeg har kaldet
+                    <HIS:hisRef type="work" target="Navneregister_HISe.xml#woFpA">
+                        <anchor type="lemma" xml:id="koB12_43"/>
+«Fangen paa Agershuus,»
+                    </HIS:hisRef>
+– den omhandler
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peCL">
+                        <anchor type="lemma" xml:id="koB12_44"/>
+Christian Lofthuus’s
+                    </HIS:hisRef>
+sørgelige Skjæbne. Denne Mands Liv er dig vistnok bekjendt, hvis ikke, saa følger her et kort Omrids af Samme. C. L levede i Slutningen af forrige Aarhundrede paa Gaarden Lofthuus nærved
+                    <HIS:hisRef type="place" target="Navneregister_HISe.xml#plLil">Lillesand</HIS:hisRef>
+, de danske Embedsmænd huserede her værre end nogensteds og Lofthuus der dengang endnu var en ung Mand og almindelig agtet besluttede at tage sig af sine undertrykte Sognefolk. Han indsamlede Klager over Embedsmændene og begav sig dermed til
+                    <HIS:hisRef type="place" target="Navneregister_HISe.xml#plKbh">Kjøbenhavn</HIS:hisRef>
+hvor han personlig fremstillede sig for
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peKongChr7">
+                        <anchor type="lemma" xml:id="koB12_45"/>
+Kongen
+                    </HIS:hisRef>
+og talede Folkets Sag saa kraftigt at en Commision blev nedsat og denne afskedigede de mest Forhadte blandt Embedsmændene. Dette var mere end hans Fiender kunde taale, han blev beskyldt for at staa i Underhandling med
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peKongG3">
+                        <anchor type="lemma" xml:id="koB12_46"/>
+den svenske Konge
+                    </HIS:hisRef>
+om at
+                    <anchor type="lemma" xml:id="koB12_47"/>
+spille denne Norge i Hænderne imod at han selv skulde beholde en Deel deraf som selvstændigt Rige. Som Følge heraf udstædtes Arrestordre mod Lofthuus, men da dette rygtedes stillede hele Skarer af bevæbnede Bønder sig til hans Beskyttelse, han befæstede sin Gaard og udholdt en formelig Beleiring indtil han ved Forræderi lokkedes til en Stad i Nærheden hvor han blev greben og paa en færdigliggende Baad ført til
+                    <pb n="[3]"/>
+                    <HIS:hisRef type="place" target="Navneregister_HISe.xml#plKri">Christiania</HIS:hisRef>
+. Her sad han paa
+                    <HIS:hisRef type="place" target="Navneregister_HISe.xml#plAkfest">Agershuus Fæstning</HIS:hisRef>
+uden Dom i 10 Aar, (indtil 1794.). Hans hemmelige Venner virkede for ham og fremkaldte derved tilsidst hans Benaadning;
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_27" target="B1844-1871ht_noter.xml" corresp="noteT12_27">
+me
+                        <supplied>n</supplied>
+                    </HIS:hisRef>
+for sildig, – just da denne ankom havde Døden forløst ham. Dette er det Historiske ved Sagen, hvilket jeg har erfaret af
+                    <anchor type="lemma" xml:id="koB12_48"/>
+et gammelt Skrift jeg heldigviis er kommen i Besiddelse af, synes du ikke at heraf kan udbringes Noget. – Jeg troer at det er fornødent at forsyne «Catilina» med
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_28" target="B1844-1871ht_noter.xml" corresp="noteT12_28">nogle</HIS:hisRef>
+og beder dig derfor at afskrive
+                    <HIS:hisRef type="tcNote" xml:id="noteT12_29" target="B1844-1871ht_noter.xml" corresp="noteT12_29">og vedlægge</HIS:hisRef>
+følgende
+                </p>
+            </div>
+            <div>
+                <head type="letter">Forord.</head>
+                <quote rend="quoteIndent">
+                    <p>
+«Nærværende Stykke var oprindelig bestemt for Scenen, Theaterdirectionen har imidlertid ikke fundet
+                        <HIS:hisRef type="tcNote" xml:id="noteT12_30" target="B1844-1871ht_noter.xml" corresp="noteT12_30">Stykket</HIS:hisRef>
+skikket hertil.
+                        <HIS:hisRef type="tcNote" xml:id="noteT12_31" target="B1844-1871ht_noter.xml" corresp="noteT12_31">Uagtet</HIS:hisRef>
+Forfatteren har Grund til at antage, at Hovedaarsagerne til Stykkets Afviisning ikke skrive sig fra indre Mangler ved Samme,
+                        <HIS:hisRef type="tcNote" xml:id="noteT12_32" target="B1844-1871ht_noter.xml" corresp="noteT12_32">er det dog</HIS:hisRef>
+ikke uden med en saare naturlig Ængstelse at
+                        <HIS:hisRef type="tcNote" xml:id="noteT12_33" target="B1844-1871ht_noter.xml" corresp="noteT12_33">han</HIS:hisRef>
+fremlægger sit Arbeide for Publicum,
+                        <anchor type="lemma" xml:id="koB12_49"/>
+hvorhos han dog forventer den skaansomme Bedømmelse, som en Begynders første Fremtræden
+                        <anchor type="lemma" xml:id="koB12_50"/>
+billigviis kan gjøre Fordring
+                        <HIS:hisRef type="tcNote" xml:id="noteT12_34" target="B1844-1871ht_noter.xml" corresp="noteT12_34">paa.»</HIS:hisRef>
+                    </p>
+                </quote>
+            </div>
+            <div type="letterpart" part="F">
+                <p>
+                    <emph>NB</emph>
+. lad endelig ingen Trykfeil indsnige sig, –
+                    <anchor type="lemma" xml:id="koB12_51"/>
+Manuscriptet vil jeg gjerne have tilbage, ligeledes bedes mig sendt 2 Expl: af Stykket naar det bliver ferdigt – –
+                </p>
+                <p>
+Lidt Nyt –
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peCE">Clara Ebbell</HIS:hisRef>
+er bleven forlovet og det med sin egen Onkel,
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peHJB">Henning Bie</HIS:hisRef>
+. –
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peTCr">
+Gamle Th
+                        <hi rend="raised">s</hi>
+Crawfurd
+                    </HIS:hisRef>
+døde iforgaars, –
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peCLD">Due</HIS:hisRef>
+har det meget hyggeligt, og er fortiden const:
+                    <anchor type="lemma" xml:id="koB12_52"/>
+Undertoldbet: –
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#peLNi">
+                        <anchor type="lemma" xml:id="koB12_53"/>
+Apothekeren
+                    </HIS:hisRef>
+beder mig erindre dig om
+                    <HIS:hisRef type="person" target="Navneregister_HISe.xml#pePSch">
+                        <anchor type="lemma" xml:id="koB12_54"/>
+din Faders Medicinreg
+                        <unclear reason="writing">ning</unclear>
+                    </HIS:hisRef>
+og siger at han vilde være meget taknemlig for en Anviisning paa din Faders Gage for Beløbet 6 Sp 4
+                    <gap reason="writing"/>
+                </p>
+                <salute>Lev vel. Din Ven</salute>
+                <signed>Henr: Ibsen</signed>
+            </div>
+        </div>
+    </body>
+</text>
