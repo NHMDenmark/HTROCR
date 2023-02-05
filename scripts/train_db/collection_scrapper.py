@@ -194,8 +194,8 @@ if __name__ == '__main__':
         "No-MM_T2924"
     ]
 
-    # for notebook in emunch_collection:
-    #     collect_emunch_db(notebook)
+    for notebook in emunch_collection:
+        collect_emunch_db(notebook)
 
     # 10 notebooks
     # Format: [Starting id, Ending id, Record id, Year]
@@ -214,8 +214,8 @@ if __name__ == '__main__':
         
     ]
 
-    # for notebook in mmd_collection:
-    #     collect_mmd_db(notebook)
+    for notebook in mmd_collection:
+        collect_mmd_db(notebook)
 
 
     # Format: [Start year, End year]
