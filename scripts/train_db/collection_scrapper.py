@@ -136,11 +136,12 @@ def collect_mmd_db(notebook_info):
 
 def collect_ibsen_db(period):
     '''
-    Given the start page, end page and collection (record) id, the function collects a list of pages 
-    and downloads page-level images along with coresponding transcriptions. 
-    NOTE: Transcriptions have no line breaks.
+    Given the year period, the function collects records from web
+    and downloads page-level images. Transcriptions need to be collected manually
+    since 
     '''
     regex = "\.open\('(.+)', 'facsimileVindu"
+    sample_counter = 0
     for year in range(period[0], period[1], 1):
         # First we need to get a list of documents per year
         catalog_url = 'https://www.ibsen.uio.no/brevOversikt_{}.xhtml'.format(year)
@@ -150,6 +151,10 @@ def collect_ibsen_db(period):
         # Links to documents are positioned in table
         links = soup.select("td > a")
         letter_page_urls = ['https://www.ibsen.uio.no/' + link['href'] for link in links]
+        labels_dir = os.path.join(TRAIN_DB_DIR, 'ibsen', str(year), 'labels')
+        os.makedirs(labels_dir, exist_ok=True)
+        images_dir = os.path.join(TRAIN_DB_DIR, 'ibsen', str(year), 'images')
+        os.makedirs(images_dir, exist_ok=True)
         # Go through each letter and collect information
         for lp_url in letter_page_urls:
             lp_req = requests.get(lp_url)
@@ -160,27 +165,20 @@ def collect_ibsen_db(period):
                 text = l['onclick']
                 r = re.findall(regex, text)
                 image_url = r[0]
-                # results = []
-            print(lp_soup.find('div', {'id': 'content'}).text)
-            # tables_with_images = [t for t in lp_soup.find_all('table') if t.find('img', {'onclick': True})]
-            # texts = []
-            # for i in range(len(tables_with_images) - 1):
-            #     text = []
-            #     for element in tables_with_images[i].find_next_siblings(text=True):
-            #         if element == tables_with_images[i + 1]:
-            #             break
-            #         if element.strip():
-            #             print(element.text)
-            #             text.append(element.strip())
-            #     if text:
-            #         texts.append(text)
-            
-            # print(texts)
-                # break
+                image_data = requests.get(image_url).content
+                # Image link is broken in their website
+                if len(image_data) < 500:
+                    continue
 
-            break
-        break
-            # image_url = 'http://www.edd.uio.no/ibsen/php/visside_1_3.php?type=brev&id=B18520516NTB&side=[{}]&versjon=1.3'
+                filename = "sample_{}".format(sample_counter)
+                sample_counter += 1
+                # Write image and create transcription file for manual insertion
+                image_loc = os.path.join(images_dir, filename + ".jpg")
+                with open(image_loc, 'wb') as wb:
+                    wb.write(image_data)
+                label_loc = os.path.join(labels_dir,  filename + ".txt")
+                with open(label_loc, 'w') as w:
+                    pass
         
 
 
@@ -226,14 +224,10 @@ if __name__ == '__main__':
         [1850, 1860],
         [1860, 1870],
         [1870, 1880],
-        [1860, 1890],
+        [1880, 1890],
         [1890, 1900],
         [1900, 1906],
     ]
 
-    # collect_ibsen_db(ibsen_collection[0])
-
-    # text = "var hentVindu = window.open('http://www.edd.uio.no/ibsen/php/visside_1_3.php?type=brev&id=Budat18700720AK&side=[a]&versjon=1.3', 'facsimileVindu', 'toolbar=0, width=450, height=700, scrollbars=1, resizable=1'); hentVindu.focus(); return false;"
-    # regex = "\.open\('(.+)', 'facsimileVindu"
-    # r = re.findall(regex, text)
-    # print(r[0])
+    for period in ibsen_collection:
+        collect_ibsen_db(period)
