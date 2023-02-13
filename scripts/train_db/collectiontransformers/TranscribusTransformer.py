@@ -1,0 +1,102 @@
+from collectiontransformers.CollectionTransformer import CollectionTransformer
+# from skimage.util import img_as_ubyte
+# from skimage.io import imread, imsave
+# from line_processor import segment_lines
+import os
+import time
+import xml.etree.ElementTree as ET
+import numpy as np
+from skimage import draw
+from PIL import Image, ImageDraw
+from tqdm import tqdm
+
+ns = {'d': 'http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15'}
+
+class TranscribusTransformer(CollectionTransformer):
+    def __init__(self, path):
+        super().__init__(path)
+
+    def format_textline(self, line):
+        '''
+        Text seems to be clean of questionable parts - no formatting needed.
+        '''
+        return line, False
+    
+    def process_line_images(self, file, tr_output, lines_dir_path, root):
+        img_to_read = os.path.join(root, file)
+        pil_image = Image.open(img_to_read)
+        orig_image = np.array(pil_image) # imread(img_to_read)
+        average_color = np.mean(orig_image, axis=(0, 1))
+        color= [np.uint8(x) for x in average_color]
+        img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.JPG', '.xml')))
+        img_xml_root = img_xml_tree.getroot()
+        text_lines = img_xml_root.findall(".//d:TextLine", ns)
+        for index, text_line in enumerate(text_lines):
+            if text_line.find('d:TextEquiv/d:Unicode', ns) != None:
+                transcription = text_line.find('d:TextEquiv/d:Unicode',ns).text
+                points_string = text_line.find('d:Coords', ns).attrib['points']
+                coords = points_string.split(' ')
+                coords = [tuple(map(int, coord.split(','))) for coord in coords]
+                points = np.array(coords)
+
+                mask = Image.new("1", pil_image.size,0)
+                ImageDraw.Draw(mask).polygon(list(zip(points[:,0], points[:,1])), fill=1)
+                mask_array = np.array(mask)
+                masked_image = np.ones_like(orig_image)*color
+                masked_image[mask_array, :] = orig_image[mask_array, :]
+                masked_image = masked_image[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
+                # If using skimage:
+
+                # mask = np.zeros(orig_image.shape[:2], dtype=bool)
+                # rr, cc = draw.polygon(points[:, 1], points[:, 0], shape=orig_image.shape[:2])
+                # mask[rr, cc] = True
+                # masked_image = img_as_ubyte(np.ones_like(orig_image)*color)
+                # masked_image[mask, :] = orig_image[mask, :]
+                # masked_image = masked_image[np.min(rr):np.max(rr), np.min(cc):np.max(cc)]
+                line_image_filename = "{}_line_{}.jpg".format(file.replace('.JPG', ''), index)
+                loc = os.path.join(lines_dir_path, line_image_filename)
+                if len(masked_image) != 0:
+                    res = Image.fromarray(masked_image)
+                    res.save(loc)
+                # imsave(loc, masked_image, check_contrast=False)
+                tr_output += "{}\t{}\n".format(line_image_filename, transcription)
+        return tr_output
+
+    
+    def process_collection(self):
+        gt_path = ''
+        lines_dir_path = ''
+        output = ""
+        start = 0
+
+        root_path = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/Gjentofte_1881-1913_Denmark/images'
+        root_path2 = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/Gjentofte_1881-1913_Denmark/lines-new'
+
+        imgs_to_process = []
+        for file in os.listdir(root_path):
+            if file.endswith('.JPG'):
+                imgs_to_process.append(file)
+
+        imgs_processed = []
+        for file in os.listdir(root_path2):
+            if file.endswith('.jpg'):
+                imgs_processed.append(file.split('_line_')[0] + '.JPG')
+
+        elements_to_process = list(set(imgs_to_process) - set(imgs_processed))
+        elements_to_process.append('P1019482.JPG')
+        for root, dirs, files in os.walk(self.path):
+            if 'images' in dirs and 'page' in dirs:
+                start = int(round(time.time()))
+                print("Processing directory: {}".format(root))
+                lines_dir_path = os.path.join(root, 'lines-new')
+                gt_path = root
+                os.makedirs(lines_dir_path, exist_ok=True)
+            if root.endswith('images'):
+                for i in tqdm(range(len(files)), desc="pages"):
+                    file = files[i]
+                    if file.endswith('.JPG') and (file in elements_to_process):
+                        output = self.process_line_images(file, output, lines_dir_path, root)
+                with open(os.path.join(gt_path, 'gt_train_updated.txt'), 'w') as w:
+                    w.write(output)
+                print('Finished cropping images. Elapsed time: {} seconds'.format(int(round(time.time())) - start))
+        print("Done.")

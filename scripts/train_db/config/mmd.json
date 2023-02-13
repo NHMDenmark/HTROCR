@@ -1,0 +1,16 @@
+{
+    "L1_ratio": 0.6667,
+    "L2_ratio": 0.25,
+    "first_dilation_rect_h": 1,
+    "first_dilation_rect_w": 30,
+    "erosion_rect_h": 5,
+    "erosion_rect_w": 150,
+    "second_dilation_rect_h": 10,
+    "second_dilation_rect_w": 2000,
+    "inter_line_spacing": 35,
+    "line_max_h": 150,
+    "line_min_h": 1,
+    "line_min_w": 60,
+    "bbox_row_pad": 20,
+    "bbox_col_pad": 70
+}
