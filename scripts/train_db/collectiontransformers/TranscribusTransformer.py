@@ -58,6 +58,7 @@ class TranscribusTransformer(CollectionTransformer):
         img_to_read = os.path.join(root, file)
         pil_image = Image.open(img_to_read)
         orig_image = np.array(pil_image) # imread(img_to_read)
+        # Select average color for bounding box outside polygon
         average_color = np.mean(orig_image, axis=(0, 1))
         if len(orig_image.shape) == 3:
             color = [np.uint8(x) for x in average_color]
@@ -73,10 +74,11 @@ class TranscribusTransformer(CollectionTransformer):
                 coords = points_string.split(' ')
                 coords = [tuple(map(int, coord.split(','))) for coord in coords]
                 points = np.array(coords)
-
+                # Extract polygon
                 mask = Image.new("1", pil_image.size,0)
                 ImageDraw.Draw(mask).polygon(list(zip(points[:,0], points[:,1])), fill=1)
                 mask_array = np.array(mask)
+                # Wrap polygon with a bounding box
                 masked_image = np.ones_like(orig_image)*color
                 if len(orig_image.shape) == 3:
                     masked_image[mask_array, :] = orig_image[mask_array, :]
@@ -106,14 +108,15 @@ class TranscribusTransformer(CollectionTransformer):
     
     def process_collection(self):
         """
-        Process Transkribus zip exports with '.jpg' format images.
+        Process Transkribus zip exports with '.jpg' format images. 
+        It is assumed that all images are placed within `images` dir.
         """
         gt_path = ''
         lines_dir_path = ''
         output = ""
         start = 0
         for root, dirs, files in os.walk(self.path):
-            # Making an assumption of folder layout structure
+            # Making an assumption of file structure
             if 'images' in dirs and 'page' in dirs:
                 start = int(round(time.time()))
                 print("Processing directory: {}".format(root))
