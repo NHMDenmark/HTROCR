@@ -28,7 +28,7 @@ class TranscribusTransformer(CollectionTransformer):
         img_to_read = os.path.join(root, file)
         pil_image = Image.open(img_to_read)
         orig_image = np.array(pil_image)
-        img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.JPG', '.xml')))
+        img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.jpg', '.xml')))
         img_xml_root = img_xml_tree.getroot()
         text_lines = img_xml_root.findall(".//d:TextLine", ns)
         for index, text_line in enumerate(text_lines):
@@ -40,7 +40,7 @@ class TranscribusTransformer(CollectionTransformer):
                 points = np.array(coords)
                 img = orig_image.copy()
                 cropped_image = img[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
-                line_image_filename = "{}_line_{}.jpg".format(file.replace('.JPG', ''), index)
+                line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
                 loc = os.path.join(lines_dir_path, line_image_filename)
                 if len(orig_image.shape) == 3:
                     res = Image.fromarray(cropped_image)
@@ -63,7 +63,7 @@ class TranscribusTransformer(CollectionTransformer):
             color = [np.uint8(x) for x in average_color]
         else:
             color = average_color
-        img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.JPG', '.xml')))
+        img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.jpg', '.xml')))
         img_xml_root = img_xml_tree.getroot()
         text_lines = img_xml_root.findall(".//d:TextLine", ns)
         for index, text_line in enumerate(text_lines):
@@ -91,7 +91,7 @@ class TranscribusTransformer(CollectionTransformer):
                 # masked_image = img_as_ubyte(np.ones_like(orig_image)*color)
                 # masked_image[mask, :] = orig_image[mask, :]
                 # masked_image = masked_image[np.min(rr):np.max(rr), np.min(cc):np.max(cc)]
-                line_image_filename = "{}_line_{}.jpg".format(file.replace('.JPG', ''), index)
+                line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
                 loc = os.path.join(lines_dir_path, line_image_filename)
                 if len(orig_image.shape) == 3:
                     res = Image.fromarray(masked_image)
@@ -124,4 +124,14 @@ class TranscribusTransformer(CollectionTransformer):
                 with open(os.path.join(gt_path, 'gt_train_updated.txt'), 'w') as w:
                     w.write(output)
                 print('Finished cropping images. Elapsed time: {} seconds'.format(int(round(time.time())) - start))
+                gt_lines = output.splitlines()
+                no_of_lines_gt = len(gt_lines)
+                line_images = [img for img in os.listdir(lines_dir_path) if img.endswith('.jpg')]
+                no_of_images = len(line_images)
+                print("Number of GT lines: ", no_of_lines_gt)
+                print("Number of line images: ", no_of_images)
+                if no_of_images != no_of_images:
+                    difference = list(set(no_of_images).symmetric_difference(set(no_of_lines_gt)))
+                    print("Differences:" )
+                    print(difference)
         print("Done.")
