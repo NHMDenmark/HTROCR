@@ -11,7 +11,7 @@ import shutil
 def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
     for line in lines:
         file = line.split('\t')[0]
-        src_file = os.path.join(in_collection_path, file)
+        src_file = os.path.join(in_collection_path, 'image', file)
         dst_file = os.path.join(out_image_path_dir, prefix+src_file)
         shutil.copy(src_file, dst_file)
 
