@@ -59,7 +59,7 @@ class TranscribusTransformer(CollectionTransformer):
         pil_image = Image.open(img_to_read)
         orig_image = np.array(pil_image) # imread(img_to_read)
         average_color = np.mean(orig_image, axis=(0, 1))
-        if len(orig_image.shape == 3):
+        if len(orig_image.shape) == 3:
             color = [np.uint8(x) for x in average_color]
         else:
             color = average_color
