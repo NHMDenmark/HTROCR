@@ -6,9 +6,9 @@ from textline_scrapper import (collect_english_texts, collect_danish_texts, coll
 
 TRAIN_DB_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data'
 
-def generate_lines(lines, text_type='en'):
+def generate_lines(lines, type, text_type='en'):
     font_dir = 'fonts/{}'.format(text_type)
-    machine_text_dir = os.path.join(TRAIN_DB_DIR, 'machine-text-{}'.format(text_type))
+    machine_text_dir = os.path.join(TRAIN_DB_DIR, '{}-machine-text-{}'.format(text_type, type))
     fonts = [os.path.join(font_dir, p) 
             for p in os.listdir(font_dir) if os.path.splitext(p)[1] == ".ttf"]
 
@@ -35,6 +35,6 @@ def generate_lines(lines, text_type='en'):
 
 
 if __name__ == '__main__':
-    generate_lines(collect_english_texts(), 'en')
-    generate_lines(collect_danish_texts(), 'dk')
-    generate_lines(collect_location_info(), 'coord')
+    generate_lines(collect_english_texts(), 'en', 'dk')
+    # generate_lines(collect_danish_texts(), 'dk', 'dk')
+    # generate_lines(collect_location_info(), 'coord', 'coord')

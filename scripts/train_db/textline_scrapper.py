@@ -157,14 +157,13 @@ def collect_location_info(n=10000):
         latitude_min = int((latitude - latitude_deg) * 60)
         longitude_deg = int(longitude)
         longitude_min = int((longitude - longitude_deg) * 60)
-        coordinates.append("{}º {}' {} {}º {}' {}".format(
-            latitude_deg, latitude_min, latitude_dir,
-            longitude_deg, longitude_min, longitude_dir))
-    # with open("coordinates.txt", 'w') as w:
-    #         w.write('\n'.join(coord for coord in coordinates))
-    return coordinates
+        coordinates.append("{}° {}'".format(
+            latitude_deg, latitude_min))
+    with open("coords_short.txt", 'w') as w:
+            w.write('\n'.join(coord for coord in coordinates))
+    # return coordinates
 
 # collect_danish_texts()
 # collect_english_texts()
-# collect_location_info()
+collect_location_info()
 # collect_specie_texts()
