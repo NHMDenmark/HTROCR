@@ -40,7 +40,7 @@ class TranscribusTransformer(CollectionTransformer):
                 points = np.array(coords)
                 img = orig_image.copy()
                 cropped_image = img[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
-                if is_low_contrast(cropped_image):
+                if np.any(np.array(cropped_image.shape) == 0) or is_low_contrast(cropped_image):
                     continue
                 line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
                 loc = os.path.join(lines_dir_path, line_image_filename)
