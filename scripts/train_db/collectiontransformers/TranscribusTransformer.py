@@ -105,23 +105,28 @@ class TranscribusTransformer(CollectionTransformer):
 
     
     def process_collection(self):
+        """
+        Process Transkribus zip exports with '.jpg' format images.
+        """
         gt_path = ''
         lines_dir_path = ''
         output = ""
         start = 0
         for root, dirs, files in os.walk(self.path):
+            # Making an assumption of folder layout structure
             if 'images' in dirs and 'page' in dirs:
                 start = int(round(time.time()))
                 print("Processing directory: {}".format(root))
-                lines_dir_path = os.path.join(root, 'lines-new')
+                lines_dir_path = os.path.join(root, 'lines')
                 gt_path = root
                 os.makedirs(lines_dir_path, exist_ok=True)
             if root.endswith('images'):
                 for i in tqdm(range(len(files)), desc="pages"):
                     file = files[i]
-                    if file.endswith('.JPG'):
+                    # Process only '.jpg' files
+                    if file.endswith('.jpg'):
                         output = self.process_line_images(file, output, lines_dir_path, root)
-                with open(os.path.join(gt_path, 'gt_train_updated.txt'), 'w') as w:
+                with open(os.path.join(gt_path, 'gt_train.txt'), 'w') as w:
                     w.write(output)
                 print('Finished cropping images. Elapsed time: {} seconds'.format(int(round(time.time())) - start))
                 gt_lines = output.splitlines()
