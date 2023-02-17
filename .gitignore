@@ -3,6 +3,6 @@ data/
 .DS_Store
 **/.DS_Store
 articles/
-train_db/fonts/
+database/fonts/
 handwriting_line_generation
 TextRecognitionDataGenerator
