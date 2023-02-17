@@ -1,0 +1,14 @@
+{
+    "transformers": {
+        "emunch": null,
+        "mmd": null,
+        "retro": null,
+        "transkribus": "path_to_transkribus_collection"
+    },
+
+    "db_collection": {
+        "path_to_collection": -1
+    },
+
+    "db_path": "path_to_where_db_should_be_stored"
+}
