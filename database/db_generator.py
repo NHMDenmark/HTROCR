@@ -15,26 +15,44 @@ def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
         dst_file = os.path.join(out_image_path_dir, prefix + file)
         shutil.copy(src_file, dst_file)
 
+def split_validation_set(config):
+    database_path = config['db_path']
+    train_labels_file = 'gt_trainv2.txt'
+    valid_labels_file = 'gt_valid.txt'
+    with open(os.path.join(database_path, 'gt_train.txt'), 'r') as r:
+        lines = r.readlines()
+        random.shuffle(lines)
+        val_set = random.sample(lines, 5000)
+        train_set = [element for element in lines if element not in val_set]
+    with open(os.path.join(database_path, train_labels_file), 'w') as w:
+        w.write("".join(train_set))
+    with open(os.path.join(database_path, valid_labels_file), 'w') as w:
+        w.write("".join(val_set))
+
 def generate(config):
     database_path = config['db_path']
     image_path_dir = os.path.join(database_path, 'image')
     os.makedirs(image_path_dir, exist_ok=True)
-    labels_file = 'gt_train.txt'
+    train_labels_file = 'gt_train.txt'
+    valid_labels_file = 'gt_valid.txt'
     db_collection = config['db_collection']
     collection_labels = []
     for index, subset in enumerate(db_collection):
         subset_size = db_collection[subset]
-        lines = []
         with open(os.path.join(subset, 'gt_train.txt'), 'r') as r:
             lines = r.readlines()
-        if subset_size != -1:
-            lines = random.sample(lines, subset_size)
-        collection_prefix = "source_{}_".format(index)
-        copy_images(lines, collection_prefix, subset, image_path_dir)
-        lines = [collection_prefix+l for l in lines]
-        collection_labels += lines
-    with open(os.path.join(database_path, labels_file), 'w') as w:
-        w.write("".join(collection_labels))
+            if subset_size != -1:
+                lines = random.sample(lines, subset_size)
+            collection_prefix = "source_{}_".format(index)
+            copy_images(lines, collection_prefix, subset, image_path_dir)
+            collection_labels += [collection_prefix+l for l in lines]
+    random.shuffle(collection_labels)
+    val_set = random.sample(collection_labels, 5000)
+    train_set = [element for element in collection_labels if element not in val_set]
+    with open(os.path.join(database_path, train_labels_file), 'w') as w:
+        w.write("".join(train_set))
+    with open(os.path.join(database_path, valid_labels_file), 'w') as w:
+        w.write("".join(val_set))
 
 def prepare_line_level_images(config):
     # Prepare line level images
@@ -66,6 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--config_path', help='Path to generator config', default='./config/generator.json')
     parser.add_argument('-l', '--generate_lines', help='Specify whether you want to generate lines', action=argparse.BooleanOptionalAction)
     parser.add_argument('-d', '--generate_db', help='Specify whether you want to generate database', action=argparse.BooleanOptionalAction)
+    parser.add_argument('-s', '--split_db', help='Force another validation split', action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
     with open(args.config_path) as f:
@@ -74,3 +93,5 @@ if __name__ == '__main__':
         prepare_line_level_images(config)
     if args.generate_db:
         generate(config)
+    if args.split_db:
+        split_validation_set(config)
