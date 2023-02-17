@@ -3,7 +3,7 @@ import os
 
 if __name__ == '__main__':
     # Prepare line level images
-    path = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/emunch"
+    path = "../../data/training_data/emunch"
 
     for root, dirs, files in os.walk(path):
         for f in files:

@@ -88,4 +88,4 @@ def process_emunch_collection(path):
 
 
 if __name__ == '__main__':
-    process_emunch_collection("/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/emunch")
+    process_emunch_collection("../../data/training_data/emunch")

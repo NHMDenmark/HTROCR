@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from textline_scrapper import (collect_english_texts, collect_danish_texts, collect_location_info)
 
-TRAIN_DB_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data'
+TRAIN_DB_DIR = '../../data/training_data'
 
 def generate_lines(lines, type, text_type='en'):
     font_dir = 'fonts/{}'.format(text_type)

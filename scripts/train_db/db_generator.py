@@ -4,6 +4,7 @@ from collectiontransformers.EmunchTransformer import EmunchTransformer
 from collectiontransformers.MMDTransformer import MMDTransformer
 from collectiontransformers.RetroTransformer import RetroTransformer
 from collectiontransformers.TranscribusTransformer import TranscribusTransformer
+import sys
 
 
 def make_stratified_split(seed):
@@ -17,15 +18,16 @@ def generate():
 
 
 if __name__ == '__main__':
+    path = sys.argv[1]
     # Prepare line level images
-    # emunch_transformer = EmunchTransformer("/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/emunch")
+    # emunch_transformer = EmunchTransformer(path)
     # emunch_transformer.process_collection()
 
-    # mmd_transformer = MMDTransformer('/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/mmd')
+    # mmd_transformer = MMDTransformer(path)
     # mmd_transformer.process_collection()
 
-    # retro_transformer = RetroTransformer('/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/retrodigitalisering/Fodby-Sogneråd-1842-1870')
+    # retro_transformer = RetroTransformer(path)
     # retro_transformer.process_collection()
 
-    transcribus_transformer = TranscribusTransformer('/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/Gjentofte_1881-1913_Denmark')
+    transcribus_transformer = TranscribusTransformer(path)
     transcribus_transformer.process_collection()

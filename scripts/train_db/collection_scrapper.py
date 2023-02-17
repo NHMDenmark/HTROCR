@@ -4,7 +4,7 @@ import requests
 from lxml import etree
 from bs4 import BeautifulSoup as bs
 
-TRAIN_DB_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data'
+TRAIN_DB_DIR = '../../data/training_data'
 
 def collect_emunch_db(notebook):
     '''

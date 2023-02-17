@@ -3,8 +3,8 @@ import numpy as np
 from skimage.io import imread, imsave
 from skimage import draw
 import os
-root_path = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/Gjentofte_1881-1913_Denmark/images'
-root_path2 = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/training_data/Gjentofte_1881-1913_Denmark/lines'
+root_path = '../../data/training_data/Gjentofte_1881-1913_Denmark/images'
+root_path2 = '../../data/training_data/Gjentofte_1881-1913_Denmark/lines'
 
 imgs_to_process = []
 for file in os.listdir(root_path):
