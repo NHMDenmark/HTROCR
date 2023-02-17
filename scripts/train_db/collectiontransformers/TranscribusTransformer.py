@@ -1,6 +1,7 @@
 from collectiontransformers.CollectionTransformer import CollectionTransformer
 # from skimage.util import img_as_ubyte
-# from skimage.io import imread, imsave
+from skimage.io import imread, imsave
+from skimage.exposure import is_low_contrast
 import os
 import time
 import xml.etree.ElementTree as ET
@@ -26,8 +27,7 @@ class TranscribusTransformer(CollectionTransformer):
         Extracts bounding box that is wrapping the given polygon coordinates
         """
         img_to_read = os.path.join(root, file)
-        pil_image = Image.open(img_to_read)
-        orig_image = np.array(pil_image)
+        orig_image = imread(img_to_read)
         img_xml_tree = ET.parse(os.path.join(root, '../page', file.replace('.jpg', '.xml')))
         img_xml_root = img_xml_tree.getroot()
         text_lines = img_xml_root.findall(".//d:TextLine", ns)
@@ -40,14 +40,11 @@ class TranscribusTransformer(CollectionTransformer):
                 points = np.array(coords)
                 img = orig_image.copy()
                 cropped_image = img[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
+                if is_low_contrast(cropped_image):
+                    continue
                 line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
                 loc = os.path.join(lines_dir_path, line_image_filename)
-                if len(orig_image.shape) == 3:
-                    res = Image.fromarray(cropped_image)
-                    res.save(loc)
-                else:
-                    res = Image.fromarray(cropped_image).convert('L')
-                    res.save(loc)
+                imsave(loc, cropped_image, check_contrast=False)
                 tr_output += "{}\t{}\n".format(line_image_filename, transcription)
         return tr_output
 
