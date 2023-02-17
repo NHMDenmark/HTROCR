@@ -8,11 +8,12 @@ import argparse
 import random
 import shutil
     
-def copy_images(lines, in_collection_path, out_image_path_dir):
+def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
     for line in lines:
         file = line.split('\t')[0]
         src_file = os.path.join(in_collection_path, file)
-        shutil.copy(src_file, out_image_path_dir)
+        dst_file = os.path.join(out_image_path_dir, prefix+src_file)
+        shutil.copy(src_file, dst_file)
 
 def generate(config):
     database_path = config['db_path']
@@ -21,14 +22,16 @@ def generate(config):
     labels_file = 'gt_train.txt'
     db_collection = config['db_collection']
     collection_labels = []
-    for subset in db_collection:
+    for index, subset in enumerate(db_collection):
         subset_size = db_collection[subset]
         lines = []
         with open(os.path.join(subset, 'gt_train.txt'), 'r') as r:
             lines = r.readlines()
         if subset_size != -1:
             lines = random.sample(lines, subset_size)
-        copy_images(lines, subset, image_path_dir)
+        collection_prefix = "source_{}_".format(index)
+        copy_images(lines, collection_prefix, subset, image_path_dir)
+        lines = [collection_prefix+l for l in lines]
         collection_labels += lines
     with open(os.path.join(database_path, labels_file), 'w') as w:
         w.write("".join(collection_labels))
