@@ -12,13 +12,13 @@ def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
     for line in lines:
         file = line.split('\t')[0]
         src_file = os.path.join(in_collection_path, 'image', file)
-        dst_file = os.path.join(out_image_path_dir, prefix+src_file)
+        dst_file = os.path.join(out_image_path_dir, prefix + file)
         shutil.copy(src_file, dst_file)
 
 def generate(config):
     database_path = config['db_path']
     image_path_dir = os.path.join(database_path, 'image')
-    os.makedirs(image_path_dir)
+    os.makedirs(image_path_dir, exist_ok=True)
     labels_file = 'gt_train.txt'
     db_collection = config['db_collection']
     collection_labels = []
