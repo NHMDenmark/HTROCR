@@ -7,8 +7,10 @@ from torchvision.datasets.utils import download_url
 import cv2
 
 NHMD_DATA_URL = 'https://specify-attachments.science.ku.dk/static/NHMD_Botany/originals/'
-DATA_ROOT = './data'
+DATA_ROOT = '../data'
 NHMD_ORIG = 'NHMD_ORIG'
+NHMD_ORIG_LIST_PATH = '../data/NHMD_ORIG/info.csv'
+NHMD_BASELINE_TRAIN = 'NHMD_BASELINE_TRAIN'
 NHMD_BBOX = 'NHMD_BBOX'
 NHMD_DATASET_CSV = 'NHMD_dataset.csv'
 SEL_DATASET_CSV = 'info.csv'
@@ -53,7 +55,7 @@ def analyse_dataset(df, validSamples):
         print(f"# of valid records between {years_valid[0]+prev} and {years_valid[0]+cur} : {range_x}")
         prev = cur
 
-def year_stratified_split(dataset, lower_bound=1799, upper_bound=1950, group_size=10, seed=None):
+def year_stratified_split(dataset, lower_bound=1799, upper_bound=1950, group_size=10, elements_to_take=20, seed=None):
     if seed is not None:
         np.random.seed(seed)
 
@@ -62,9 +64,10 @@ def year_stratified_split(dataset, lower_bound=1799, upper_bound=1950, group_siz
     for group in groups:
         group_arr = groups[group].to_numpy()
         np.random.shuffle(group_arr)
-        random_samples = group_arr[0:20]
+        random_samples = group_arr[0:elements_to_take]
         selected_data = selected_data + list(random_samples)
     return dataset.filter(items = selected_data, axis=0)
+
 
 def get_sorted_contours(img):
     contours = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -92,7 +95,10 @@ def add_bbox(imageset_df, in_path, out_path):
             cv2.rectangle(image, (x,y), (x+w, y+h),(0, 0, 255), 2)
     cv2.imwrite(out_path+'/bboxed.png', image)
                 
-def gen_datasets(force_update):
+def gen_test_dataset(force_update):
+    '''
+    Generator for HTR test samples
+    '''
     sel_img_data_path = os.path.join(DATA_ROOT, NHMD_ORIG)
     sel_img_df_path = os.path.join(sel_img_data_path, SEL_DATASET_CSV)
     selected_df = None
@@ -111,5 +117,27 @@ def gen_datasets(force_update):
     add_bbox(selected_df, sel_img_data_path, bbox_img_path)
 
 
+def gen_baseline_train_db():
+    '''
+    Generator for ARU-NET train db samples. Samples still need to be pre-processed into separate
+    channels.
+    '''
+    selected_df = None
+    # Read test db csv
+    _, test_df = read_and_clean_dataset(NHMD_ORIG_LIST_PATH)
+    sel_img_data_path = os.path.join(DATA_ROOT, NHMD_BASELINE_TRAIN)
+    sel_img_df_path = os.path.join(sel_img_data_path, SEL_DATASET_CSV)
+    if (not os.path.exists(sel_img_df_path)):
+        # Read full db csv
+        _, valid_df = read_and_clean_dataset()
+        selected_df = year_stratified_split(valid_df, elements_to_take=110)
+        analyse_dataset(selected_df, selected_df)
+        cond = selected_df[url_col].isin(test_df[url_col])
+        selected_df.drop(selected_df[cond].index, inplace = True)
+        print(f"Total number of training samples: {selected_df.shape[0]}")
+        download_images(selected_df, sel_img_data_path)
+
+
 if __name__ == '__main__':
-    gen_datasets(sys.argv[1])
+    # gen_test_dataset(sys.argv[1])
+    gen_baseline_train_db()
