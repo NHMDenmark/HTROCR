@@ -20,8 +20,8 @@ def get_scores(data_dir):
             output = r.read()
         with open(gt_path) as r:
             gt_transcriptions = r.read()
-        c = np.clip(float(cer(output, gt_transcriptions).numpy()), 0.0, 1.0)
-        w = np.clip(float(wer(output, gt_transcriptions).numpy()), 0.0, 1.0)
+        c = np.clip(float(cer(output.lower(), gt_transcriptions.lower()).numpy()), 0.0, 1.0)
+        w = np.clip(float(wer(output.lower(), gt_transcriptions.lower()).numpy()), 0.0, 1.0)
         # Handling the case where no text was transcribed at all
         if math.isnan(c) or math.isnan(w):
             c = 1.0
@@ -62,8 +62,14 @@ def evaluate_model(args):
         response += gen_response(cer_bbox, wer_bbox, cer_orig, wer_orig)
     
     if args.trocr or args.all:
-        cer, wer = get_scores("TROCR_NHMD_LINES_IAM_BASE")
-        response += '===== TrOCR =====\n'
+        # cer, wer = get_scores("TROCR_NHMD_LINES_IAM_BASE")
+        # response += '===== TrOCR =====\n'
+        # response += 'LINE CER: {}\nLINE WER: {}\n'.format(cer, wer)
+        # cer, wer = get_scores("../trocr_results/small_v2/single_line")
+        # response += '===== TrOCR_SMALL - NHMD =====\n'
+        # response += 'LINE CER: {}\nLINE WER: {}\n'.format(cer, wer)
+        cer, wer = get_scores("../trocr_results/large/single_line")
+        response += '===== TrOCR_LARGE - NHMD =====\n'
         response += 'LINE CER: {}\nLINE WER: {}\n'.format(cer, wer)
     
     if args.van or args.all:

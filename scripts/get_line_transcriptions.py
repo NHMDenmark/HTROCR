@@ -1,9 +1,9 @@
 import os
 import pandas as pd
 
-transcription_file = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM_BASE/generate-test.txt"
+transcription_file = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/trocr_results/NHMD_ft_large.txt"
 gt_file = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/data/gt_test.txt'
-output_folder = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results/TROCR_NHMD_LINES_IAM_BASE'
+output_folder = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/trocr_results/large'
 
 def gen_numerated_mappings():
     mappings = []

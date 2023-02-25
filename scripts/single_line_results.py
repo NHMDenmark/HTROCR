@@ -1,5 +1,6 @@
 import shutil
 import os
+import io
 
 RESULTS_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results'
 OUTPUT_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/single_line_results'
@@ -17,17 +18,18 @@ def cp_dirs():
 def transform_to_single_line(dir):
     data_path = os.path.join(OUTPUT_DIR, dir)
     for file in os.listdir(data_path):
-        file_path = os.path.join(data_path, file)
-        with open(file_path, 'r') as r :
-            filedata = r.read()
+        if file != '.DS_Store' and not os.path.isdir(os.path.join(data_path, file)):
+            file_path = os.path.join(data_path, file)
+            with open(file_path, 'r+') as r :
+                filedata = r.read()
 
-        # Replace the target string
-        filedata = filedata.replace('\n', ' ')
+            # Replace the target string
+            filedata = filedata.replace('\n', ' ')
 
-        # # Write the file out again
-        with open(file_path, 'w') as w:
-            w.write(filedata)
+            # # Write the file out again
+            with open(os.path.join(OUTPUT_DIR, '../trocr_results/large/single_line/'+file), 'w') as w:
+                w.write(filedata)
 
 if __name__ == '__main__':
-    cp_dirs()
-    transform_to_single_line('TROCR_NHMD_LINES_IAM_BASE')
+    # cp_dirs()
+    transform_to_single_line('../trocr_results/large')
