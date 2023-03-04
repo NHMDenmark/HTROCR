@@ -139,4 +139,5 @@ class TranscribusTransformer(CollectionTransformer):
                     difference = list(set(no_of_images).symmetric_difference(set(no_of_lines_gt)))
                     print("Differences:" )
                     print(difference)
+                output = ""
         print("Done.")
