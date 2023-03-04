@@ -16,6 +16,10 @@ def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
         shutil.copy(src_file, dst_file)
 
 def split_validation_set(config):
+    '''
+    Makes train - validation set split from gt_train.txt,
+    which contains all gathered samples.
+    '''
     database_path = config['db_path']
     train_labels_file = 'gt_trainv2.txt'
     valid_labels_file = 'gt_valid.txt'
@@ -73,6 +77,8 @@ def prepare_line_level_images(config):
         retro_transformer.process_collection()
 
     if trankribus_path:
+        # Assumes that all images in PAGE schema are placed into 'images' dir
+        # at the same level as page xml dir
         transcribus_transformer = TranscribusTransformer(trankribus_path)
         transcribus_transformer.process_collection()
 

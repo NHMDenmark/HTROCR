@@ -117,10 +117,10 @@ def gen_test_dataset(force_update):
     add_bbox(selected_df, sel_img_data_path, bbox_img_path)
 
 
-def gen_baseline_train_db():
+def pull_baseline_train_db():
     '''
     Generator for ARU-NET train db samples. Samples still need to be pre-processed into separate
-    channels.
+    channels. Next step is to extract baselines - one way is to use Transkribus
     '''
     selected_df = None
     # Read test db csv
@@ -136,6 +136,7 @@ def gen_baseline_train_db():
         selected_df.drop(selected_df[cond].index, inplace = True)
         print(f"Total number of training samples: {selected_df.shape[0]}")
         download_images(selected_df, sel_img_data_path)
+
 
 
 if __name__ == '__main__':
