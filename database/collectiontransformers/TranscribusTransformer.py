@@ -36,17 +36,18 @@ class TranscribusTransformer(CollectionTransformer):
                 transcription = text_line.find('d:TextEquiv/d:Unicode',ns).text
                 points_string = text_line.find('d:Coords', ns).attrib['points']
                 coords = points_string.split(' ')
-                if len(coords) > 0:
-                    coords = [tuple(map(int, coord.split(','))) for coord in coords]
-                    points = np.array(coords)
-                    img = orig_image.copy()
-                    cropped_image = img[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
-                    if np.any(np.array(cropped_image.shape) == 0) or is_low_contrast(cropped_image):
-                        continue
-                    line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
-                    loc = os.path.join(lines_dir_path, line_image_filename)
-                    imsave(loc, cropped_image, check_contrast=False)
-                    tr_output += "{}\t{}\n".format(line_image_filename, transcription)
+                coords = [tuple(map(int, coord.split(','))) for coord in coords if ',' in coord]
+                if len(coords) == 0:
+                    continue
+                points = np.array(coords)
+                img = orig_image.copy()
+                cropped_image = img[np.min(points[:,1]):np.max(points[:,1]), np.min(points[:,0]):np.max(points[:,0])]
+                if np.any(np.array(cropped_image.shape) == 0) or is_low_contrast(cropped_image):
+                    continue
+                line_image_filename = "{}_line_{}.jpg".format(file.replace('.jpg', ''), index)
+                loc = os.path.join(lines_dir_path, line_image_filename)
+                imsave(loc, cropped_image, check_contrast=False)
+                tr_output += "{}\t{}\n".format(line_image_filename, transcription)
         return tr_output
 
     def process_line_images_polygons(self, file, tr_output, lines_dir_path, root):
@@ -120,6 +121,8 @@ class TranscribusTransformer(CollectionTransformer):
                 print("Processing directory: {}".format(root))
                 lines_dir_path = os.path.join(root, 'lines')
                 gt_path = root
+                if os.path.exists(lines_dir_path):
+                    continue
                 os.makedirs(lines_dir_path, exist_ok=True)
             if root.endswith('images'):
                 for i in tqdm(range(len(files)), desc="pages"):
