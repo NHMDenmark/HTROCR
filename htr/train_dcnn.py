@@ -72,7 +72,7 @@ def train():
                 grad_clip=grad_clip, 
                 weight_decay=weight_decay, 
                 opt_func=opt_func)
-    return history()
+    return history
 
 def plot_accuracies(history):
     accuracies = [x['val_acc'] for x in history]
@@ -80,7 +80,7 @@ def plot_accuracies(history):
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
     plt.title('Accuracy vs. No. of epochs')
-    plt.savefig("results/dcnn_accuracy.png")
+    plt.savefig("dcnn_accuracy.png")
 
 if __name__ == '__main__':
     history = train()
