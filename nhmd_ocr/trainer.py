@@ -5,53 +5,46 @@ import NHMDDataset
 from NHMDEncoderDecoder import generate_model
 import MetricProcessor
 import json
+import time
 
-def run(
-        run_name='debug',
-        encoder_name='facebook/deit-tiny-patch16-224',
-        decoder_name='cl-tohoku/bert-base-japanese-char-v2',
-        max_len=300,
-        num_decoder_layers=2,
-        batch_size=64,
-        num_epochs=8,
-        fp16=True,
-):
+def run(run_name=None):
     wandb.login()
 
-    model, processor = generate_model(encoder_name, decoder_name, max_len, num_decoder_layers)
+    config = json.load('config/default.json')
+    wandb.init(project="NHMD_OCR", config=config)
 
-    # keep package 0 for validation
-    train_dataset = NHMDDataset(processor, 'train', max_len, augment=True, skip_packages=[0])
-    eval_dataset = NHMDDataset(processor, 'test', max_len, augment=False, skip_packages=range(1, 9999))
-
+    model, processor = generate_model(config['encoder_name'], config['decoder_name'], config['max_len'], config['num_decoder_layers'])
+    train_dataset = NHMDDataset(config['data_path'], "train", processor, config['max_len'], config['augment'])
+    valid_dataset = NHMDDataset(config['data_path'], "valid", processor, config['max_len'], config['augment'])
     metrics = MetricProcessor(processor)
 
-    config = json.load('config/default.json')
+    if run_name == None:
+        run_name = f'execution_no_{str(time.time())}'
+
     training_args = Seq2SeqTrainingArguments(
         predict_with_generate=True,
-        evaluation_strategy='steps',
-        save_strategy='steps',
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        fp16=fp16,
-        fp16_full_eval=fp16,
-        dataloader_num_workers=16,
+        evaluation_strategy=config['evaluation_strategy'],
+        save_strategy=config['weight_save_strategy'],
+        per_device_train_batch_size=config['batch_size'],
+        per_device_eval_batch_size=config['batch_size'],
+        fp16=config['fp16'],
+        fp16_full_eval=config['fp16_eval'],
+        dataloader_num_workers=config['dataloader_workers'],
         output_dir=config['output_dir'],
-        logging_steps=10,
-        save_steps=20000,
-        eval_steps=20000,
-        num_train_epochs=num_epochs,
+        logging_steps=config['logging_steps'],
+        save_steps=config['save_steps'],
+        eval_steps=config['eval_steps'],
+        num_train_epochs=config['train_epochs'],
         run_name=run_name
     )
 
-    # instantiate trainer
     trainer = Seq2SeqTrainer(
         model=model,
         tokenizer=processor.feature_extractor,
         args=training_args,
         compute_metrics=metrics.compute_metrics,
         train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
+        eval_dataset=valid_dataset,
         data_collator=default_data_collator,
     )
     trainer.train()

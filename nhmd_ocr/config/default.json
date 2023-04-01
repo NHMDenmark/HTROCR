@@ -1,5 +1,19 @@
 {
     "encoder": "facebook/deit-tiny-patch16-224",
-    "decoder": "ADD",
-    "output_dir": "./out"
+    "decoder": "pstroe/roberta-base-latin-cased",
+    "max_len": 300,
+    "num_decoder_layers": 2,
+    "augment": true,
+    "data_path": "../data/main",
+    "output_dir": "./out",
+    "weight_save_strategy": "steps",
+    "evaluation_strategy": "steps",
+    "batch_size": 64,
+    "fp16": true,
+    "fp16_eval": true,
+    "dataloader_workers": 16,
+    "logging_steps": 10,
+    "save_steps": 20000,
+    "eval_steps": 20000,
+    "train_epochs": 8
 }
