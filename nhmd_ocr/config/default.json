@@ -1,10 +1,10 @@
 {
-    "encoder": "facebook/deit-tiny-patch16-224",
-    "decoder": "pstroe/roberta-base-latin-cased",
+    "encoder_name": "facebook/deit-tiny-patch16-224",
+    "decoder_name": "pstroe/roberta-base-latin-cased",
     "max_len": 300,
     "num_decoder_layers": 2,
     "augment": true,
-    "data_path": "../data/main",
+    "data_path": "../data/NHMD_train",
     "output_dir": "./out",
     "weight_save_strategy": "steps",
     "evaluation_strategy": "steps",

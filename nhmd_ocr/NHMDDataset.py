@@ -20,12 +20,16 @@ class NHMDDataset(Dataset):
         image_path = os.path.join(path, image_dir)
         assert os.path.exists(labels_path), f"Could not find gt_{dbtype}.txt in the given path"
         assert os.path.exists(image_path) and os.path.isdir(image_path), f"Could not find `image` dir in the given path"
-        df = pd.read_fwf(labels_path, header=None)
+        with open(labels_path, 'r') as f:
+            lines = f.readlines()
+        data = []
+        for line in lines:
+            elements = line.strip().split('\t')
+            data.append(elements)
+        df = pd.DataFrame(data)
         df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
         del df[2]
-        # some file names end with jp instead of jpg, let's fix this
         df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
-        df.head()
         self.data = df
         print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
         self.max_length = max_length
@@ -47,13 +51,12 @@ class NHMDDataset(Dataset):
             transform_variant = np.random.choice(['none', 'medium', 'heavy'],
                                                  p=[1 - medium_p - heavy_p, medium_p, heavy_p])
             transform = {
-                'none': None,
+                'none': A.ToGray(always_apply=True),
                 'medium': self.transform_medium,
                 'heavy': self.transform_heavy,
             }[transform_variant]
         else:
             transform = A.ToGray(always_apply=True)
-
         img = Image.open(img_path).convert("RGB")
         image = np.array(img)
         img_transformed = transform(image=image)['image']
@@ -118,7 +121,7 @@ if __name__ == '__main__':
     max_length = 300
 
     processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("../data/IAM", "test", processor, max_length, augment=True)
+    ds = NHMDDataset("../data/NHMD_train", "valid", processor, max_length, augment=True)
 
     sample = ds[0]
     tensor_image = sample['pixel_values']

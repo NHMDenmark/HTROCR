@@ -1,16 +1,16 @@
 import fire
 import wandb
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, default_data_collator
-import NHMDDataset
+from NHMDDataset import NHMDDataset
 from NHMDEncoderDecoder import generate_model
-import MetricProcessor
+from MetricProcessor import MetricProcessor
 import json
 import time
 
 def run(run_name=None):
     wandb.login()
-
-    config = json.load('config/default.json')
+    with open('config/default.json') as f:
+        config = json.load(f)
     wandb.init(project="NHMD_OCR", config=config)
 
     model, processor = generate_model(config['encoder_name'], config['decoder_name'], config['max_len'], config['num_decoder_layers'])
