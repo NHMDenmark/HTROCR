@@ -1,0 +1,5 @@
+{
+    "encoder": "facebook/deit-tiny-patch16-224",
+    "decoder": "ADD",
+    "output_dir": "./out"
+}
