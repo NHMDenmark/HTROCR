@@ -118,7 +118,7 @@ if __name__ == '__main__':
     max_length = 300
 
     processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("./IAM", "test", processor, max_length, augment=True)
+    ds = NHMDDataset("../data/IAM", "test", processor, max_length, augment=True)
 
     sample = ds[0]
     tensor_image = sample['pixel_values']
