@@ -20,17 +20,14 @@ class NHMDDataset(Dataset):
         image_path = os.path.join(path, image_dir)
         assert os.path.exists(labels_path), f"Could not find gt_{dbtype}.txt in the given path"
         assert os.path.exists(image_path) and os.path.isdir(image_path), f"Could not find `image` dir in the given path"
-        df = pd.DataFrame(columns=['file', 'label'])
-        with open(labels_path) as f:
-            lines = f.readlines()
-        for i, line in enumerate(lines):
-            if i>10:
-                break
-            elements = line.split('\t')
-            new_el_df = pd.DataFrame({'file': [elements[0]], 'label': [elements[1]]})
-            df = pd.concat([df, new_el_df], ignore_index=True)
+        df = pd.read_fwf(labels_path, header=None)
+        df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
+        del df[2]
+        # some file names end with jp instead of jpg, let's fix this
+        df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
+        df.head()
         self.data = df
-        print(f'{dbtype} dataset size: {len(self.data)}')
+        print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
         self.max_length = max_length
         self.augment = augment
         self.transform_medium, self.transform_heavy = self.__generate_transforms()
@@ -40,9 +37,9 @@ class NHMDDataset(Dataset):
 
     def __getitem__(self, idx):
         element = self.data.iloc[idx]
-        label = element.label
-        file = element.file
-        img_path = os.path.join(self.path, "image", file)
+        text = element.text
+        file_name = element.file_name
+        img_path = os.path.join(self.path, "image", file_name)
 
         if self.augment:
             medium_p = 0.8
@@ -58,32 +55,22 @@ class NHMDDataset(Dataset):
             transform = A.ToGray(always_apply=True)
 
         img = Image.open(img_path).convert("RGB")
-        # print(np.array(img))
         image = np.array(img)
         img_transformed = transform(image=image)['image']
-        print("post tansform")
-        print(label)
-        encoder_name = 'facebook/deit-tiny-patch16-224'
-        decoder_name = 'pstroe/roberta-base-latin-cased'
-        # processor = get_processor(encoder_name, decoder_name)
-        # pixel_values = processor(image, return_tensors="pt")
-        processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
-        print()
-        pixel_values = processor(image, return_tensors="pt")["pixel_values"]
+        pixel_values = self.processor(image, return_tensors="pt").pixel_values
         pixel_values = pixel_values.squeeze()
-        labels = self.processor.tokenizer(label,
+        labels = self.processor.tokenizer(text,
                                           padding="max_length",
                                           max_length=self.max_length,
                                           truncation=True).input_ids
         labels = np.array(labels)
         # important: make sure that PAD tokens are ignored by the loss function
         labels[labels == self.processor.tokenizer.pad_token_id] = -100
-
         encoding = {
             "pixel_values": pixel_values,
             "labels": torch.tensor(labels),
         }
-        print("init done")
+
         return encoding
 
     def __generate_transforms(self):
@@ -124,24 +111,21 @@ class NHMDDataset(Dataset):
         return t_medium, t_heavy
 
 if __name__ == '__main__':
-
+    # Test if dataset extraction works
     encoder_name = 'facebook/deit-tiny-patch16-224'
     decoder_name = 'pstroe/roberta-base-latin-cased'
 
     max_length = 300
 
     processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("./data", "train", processor, max_length, augment=True)
+    ds = NHMDDataset("./IAM", "test", processor, max_length, augment=True)
 
-    # for i in range(20):
     sample = ds[0]
-    print(sample)
     tensor_image = sample['pixel_values']
     image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)
+    # Plot image ..
+    
     tokens = sample['labels']
     tokens[tokens == -100] = processor.tokenizer.pad_token_id
-    text = ''.join(processor.decode(tokens, skip_special_tokens=True).split())
-
+    text = processor.decode(tokens, skip_special_tokens=True)
     print(f'{0}:\n{text}\n')
-    plt.imshow(image)
-    plt.show()
