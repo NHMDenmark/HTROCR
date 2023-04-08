@@ -1,4 +1,5 @@
 {
-    "arunet_weight_path": "arunet/net/default.pb"
-    
+    "segmenter": "precise",
+    "model_weight_path": "predictor/net/default.pb",
+    "superpixel_confidence_thresh": 0.2
 }
