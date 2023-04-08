@@ -1,8 +1,9 @@
 import fire
+import os
 import wandb
 from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, default_data_collator
 from NHMDDataset import NHMDDataset
-from NHMDEncoderDecoder import generate_model
+from NHMDEncoderDecoder import generate_model, fine_tune_model
 from MetricProcessor import MetricProcessor
 import json
 import time
@@ -13,7 +14,8 @@ def run(run_name=None):
         config = json.load(f)
     wandb.init(project="NHMD_OCR", config=config)
 
-    model, processor = generate_model(config['encoder_name'], config['decoder_name'], config['max_len'], config['num_decoder_layers'])
+#    model, processor = generate_model(config['encoder_name'], config['decoder_name'], config['max_len'], config['num_decoder_layers'])
+    model, processor = fine_tune_model(config['decoder_name'])
     train_dataset = NHMDDataset(config['data_path'], "train", processor, config['max_len'], config['augment'])
     valid_dataset = NHMDDataset(config['data_path'], "valid", processor, config['max_len'], config['augment'])
     metrics = MetricProcessor(processor)
@@ -25,8 +27,8 @@ def run(run_name=None):
         predict_with_generate=True,
         evaluation_strategy=config['evaluation_strategy'],
         save_strategy=config['weight_save_strategy'],
-        per_device_train_batch_size=config['batch_size'],
-        per_device_eval_batch_size=config['batch_size'],
+        per_device_train_batch_size=config['train_batch_size'],
+        per_device_eval_batch_size=config['eval_batch_size'],
         fp16=config['fp16'],
         fp16_full_eval=config['fp16_eval'],
         dataloader_num_workers=config['dataloader_workers'],
@@ -48,6 +50,7 @@ def run(run_name=None):
         data_collator=default_data_collator,
     )
     trainer.train()
+    trainer.save_model()
 
     wandb.finish()
 

@@ -1,31 +1,30 @@
 from transformers import AutoConfig, AutoModelForCausalLM, AutoModel, VisionEncoderDecoderModel, VisionEncoderDecoderConfig
 from TrOCREDProcessor import get_processor
 
+def fine_tune_model(decoder_name):
+    model = VisionEncoderDecoderModel.from_pretrained("out/checkpoint-50000")
+    processor = TrOCRProcessor.from_pretrained("out/checkpoint-50000")
+    return model, processor
+
 def generate_model(encoder_name, decoder_name, max_length, num_decoder_layers=None):
-    encoder_config = AutoConfig.from_pretrained(encoder_name)
-    encoder_config.is_decoder = False
-    encoder_config.add_cross_attention = False
-    encoder = AutoModel.from_config(encoder_config)
+#    encoder_config = AutoConfig.from_pretrained(encoder_name)
+#    encoder_config.is_decoder = False
+#    encoder_config.add_cross_attention = False
+#    encoder = AutoModel.from_config(encoder_config)
 
     decoder_config = AutoConfig.from_pretrained(decoder_name)
     decoder_config.max_length = max_length
     decoder_config.is_decoder = True
     decoder_config.add_cross_attention = True
     decoder = AutoModelForCausalLM.from_config(decoder_config)
+    
+#    config = VisionEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
+#    config.tie_word_embeddings = False
+#    model = VisionEncoderDecoderModel(encoder=encoder, decoder=decoder, config=config)
 
-    if num_decoder_layers is not None:
-        if decoder_config.model_type == 'bert':
-            decoder.bert.encoder.layer = decoder.bert.encoder.layer[-num_decoder_layers:]
-        elif decoder_config.model_type in ('roberta', 'xlm-roberta'):
-            decoder.roberta.encoder.layer = decoder.roberta.encoder.layer[-num_decoder_layers:]
-        else:
-            raise ValueError(f'Unsupported model_type: {decoder_config.model_type}')
-
-        decoder_config.num_hidden_layers = num_decoder_layers
-
-    config = VisionEncoderDecoderConfig.from_encoder_decoder_configs(encoder.config, decoder.config)
-    config.tie_word_embeddings = False
-    model = VisionEncoderDecoderModel(encoder=encoder, decoder=decoder, config=config)
+#    model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-large-printed')
+    model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwritten")
+    model.decoder = decoder
 
     processor = get_processor(encoder_name, decoder_name)
 

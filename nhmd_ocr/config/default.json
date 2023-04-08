@@ -1,6 +1,6 @@
 {
-    "encoder_name": "facebook/deit-tiny-patch16-224",
-    "decoder_name": "pstroe/roberta-base-latin-cased",
+    "encoder_name": "microsoft/beit-base-patch16-384",
+    "decoder_name": "xlm-roberta-base",
     "max_len": 300,
     "num_decoder_layers": 2,
     "augment": true,
@@ -8,12 +8,13 @@
     "output_dir": "./out",
     "weight_save_strategy": "steps",
     "evaluation_strategy": "steps",
-    "batch_size": 64,
+    "train_batch_size": 8,
+    "eval_batch_size": 16,
     "fp16": true,
     "fp16_eval": true,
     "dataloader_workers": 16,
     "logging_steps": 10,
-    "save_steps": 20000,
-    "eval_steps": 20000,
-    "train_epochs": 8
+    "save_steps": 10000,
+    "eval_steps": 10000,
+    "train_epochs": 5
 }

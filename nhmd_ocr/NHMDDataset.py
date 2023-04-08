@@ -28,7 +28,8 @@ class NHMDDataset(Dataset):
             data.append(elements)
         df = pd.DataFrame(data)
         df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
-        del df[2]
+        if len(df.columns) > 2:
+            del df[2]
         df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
         self.data = df
         print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
@@ -60,7 +61,7 @@ class NHMDDataset(Dataset):
         img = Image.open(img_path).convert("RGB")
         image = np.array(img)
         img_transformed = transform(image=image)['image']
-        pixel_values = self.processor(image, return_tensors="pt").pixel_values
+        pixel_values = self.processor(img_transformed, return_tensors="pt").pixel_values
         pixel_values = pixel_values.squeeze()
         labels = self.processor.tokenizer(text,
                                           padding="max_length",
@@ -123,10 +124,13 @@ if __name__ == '__main__':
     processor = get_processor(encoder_name, decoder_name)
     ds = NHMDDataset("../data/NHMD_train", "valid", processor, max_length, augment=True)
 
-    sample = ds[0]
+    sample = ds[420]
     tensor_image = sample['pixel_values']
     image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)
     # Plot image ..
+    #image = Image.open("../data/NHMD_train" + ds['file_name'][0]).convert("RGB")
+    image = Image.fromarray(image)
+    image.save("test.png")
     
     tokens = sample['labels']
     tokens[tokens == -100] = processor.tokenizer.pad_token_id
