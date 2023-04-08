@@ -1,33 +1,15 @@
 import numpy as np
 from scipy.ndimage import binary_erosion, binary_opening
 from scipy.spatial import Delaunay
-from arunet import Inference_pb
+from skimage.morphology import skeletonize
+from predictor.inference import Predictor
+from util import get_point_neighbors
+from PIL import Image
 
 class BaselineBuilder():
     def __init__(self, config):
-        self.params = config
-        self.predictor = Inference_pb(config['arunet_weight_path'])
-
-    def __skeletonize(self, Bb):
-        '''
-        Skeletonize using Lantuéjoul's method.
-
-        Parameters
-        ----------
-        Bb : array_like
-            Binarized image
-        
-        Returns
-        -------
-        skeleton : ndarray of bools
-            Eroded skeleton of the given input.
-        '''
-        skeleton = np.zeros_like(Bb, dtype=np.uint8)
-        while Bb.max()>0:
-            o = binary_opening(Bb)
-            skeleton = skeleton | (Bb & 1-o)
-            Bb = binary_erosion(Bb)
-        return skeleton
+        self.config = config
+        self.predictor = Predictor(config)
 
     def __select_superpixels(self, B, Bs):
         '''
@@ -47,27 +29,22 @@ class BaselineBuilder():
         superpixel_img : list of ndarray
             Binary image of superpixels
         '''
-        sorted_intensity_indexes = np.argsort(B.ravel())[::-1]
+        non_zero_pixels = np.nonzero((B != 0) & (Bs != 0))
+        Bpixel_idx = np.column_stack(non_zero_pixels)
+        Bfocused = B[Bpixel_idx[:, 0], Bpixel_idx[:, 1]]
+        sorted_intensity_indexes = np.argsort(Bfocused, kind='heapsort')[::-1]
         superpixel_img = np.zeros_like(Bs, dtype=np.uint8)
         superpixels = []
-        for index in sorted_intensity_indexes:
-            # Convert the flattened index to 2D indices
-            i, j = np.unravel_index(index, B.shape)
-
-            if not Bs[i,j]:
-                continue
-
-            # If probability is worse than just a guess - pixel should not be part of baseline.
-            # Further processing is not needed
-            if B[i,j] < self.config['superpixel_confidence_thresh']:
-                break
-
-            # Keeping number of superpixels small
-            a = np.array([i,j])
-            isValid = (np.array([np.linalg.norm(a-b) for b in superpixels]) >= 10).all()
-            if isValid:
-                superpixel_img[i,j] = 255
+        for i in sorted_intensity_indexes:
+            a = Bpixel_idx[i]
+            if not len(superpixels):
                 superpixels.append(a)
+                superpixel_img[tuple(a)] = 255
+            else:
+                dists = np.sqrt(((a - np.array(superpixels))**2).sum(axis=1)) 
+                if np.min(dists) >= 10:
+                    superpixels.append(a)
+                    superpixel_img[tuple(a)] = 255
         return superpixels, superpixel_img
 
     def __compute_connectivity(self, e, I):
@@ -84,8 +61,9 @@ class BaselineBuilder():
         
         Returns
         -------
-        skeleton : ndarray of bools
-            Eroded skeleton of the given input.
+        connectivity : int
+            A value showing how many non-zero pixels 
+            are within the straight line defined by the given edge 
         '''
         p, q = e
 
@@ -98,46 +76,26 @@ class BaselineBuilder():
             intensity_sum += I[point[0], point[1]]
         return intensity_sum/num_points
 
-    def __get_point_neighbours(self, N, p):
-        '''
-        Returns all neighbours for point in the neighbourhood system
-
-        Parameters
-        ----------
-        N : object_like
-            Delaunay triangulation object 
-        p : array_like
-            point coords
-        
-        Returns
-        -------
-        nv_coords : list of ndarray
-            Neighbouring vertices
-        '''
-        pointList = N.points.tolist()
-        if not isinstance(p, list):
-            p = list(p)
-        p_index = pointList.index(p)
-        pointer_to_vertex_neighbors, neighbours = N.vertex_neighbor_vertices
-        neighbour_vertices = neighbours[pointer_to_vertex_neighbors[p_index]: \
-                                    pointer_to_vertex_neighbors[p_index + 1]]
-        nv_coords = [N.points[q] for q in neighbour_vertices]
-        return nv_coords
 
     def __extract_lto(self, p, N, B):
         '''
         Extract local text orientation angle for each superpixel
-        ----------
+        
         Parameters
         ----------
-        p : list_like
+        p : tuple
             Superpixel coordinates
         T : object_like
             Delaunay tessellation object
         B : array_like
             The baseline prediction image B
+        
+        Returns
+        -------
+        angle : float
+            A local text orientation angle 
         '''
-        nv_coords = self.get_point_neighbors(N, p)
+        nv_coords = get_point_neighbors(N, p)
         M = [(np.array(p), q) for q in nv_coords]
         L = np.array([(e, self.__compute_connectivity(e, B)) for e in M], dtype=object)
         # Sort by baseline connectivities.
@@ -157,12 +115,15 @@ class BaselineBuilder():
         qy = e[0][0]
         ry = e[1][0]
         if qx > rx:
-            angle = np.arctan2((-1)*(qy-ry), qx-rx) #if qy > ry else np.arctan2(ry-qy, qx-rx)
+            angle = np.arctan2((-1)*(qy-ry), qx-rx)
         else:
-            angle = np.arctan2((-1)*(qy-ry), rx-qx) #if qy > ry else np.arctan2(ry-qy, rx-qx)
+            angle = np.arctan2((-1)*(qy-ry), rx-qx)
         return angle
 
     def __find_projections(self, p, points_within_circle, angle):
+        '''
+        Finds projections of given points on the orientation vector 
+        '''
         sp_angle = angle+(np.pi/2)
         cos = np.cos(sp_angle)
         sin = np.sin(sp_angle)
@@ -176,14 +137,18 @@ class BaselineBuilder():
         valid_area_points = points_within_circle[valid_area_point_idx]
         if len(valid_area_points) == 0:
             return -1
+        pq = np.stack((valid_area_points[:,1] - p[1], -(valid_area_points[:,0]-p[0])), axis=-1)
+        projections = np.dot(pq, orientation_vector)
         distance_to_pline = np.abs(cos*(p[0]-valid_area_points[:,0]) - sin*(p[1]-valid_area_points[:,1]))
-        closest_point2line_idx = np.argmin(distance_to_pline)
-        pproject = valid_area_points[closest_point2line_idx]
-        pq = [pproject[1] - p[1], (-1)*(pproject[0]-p[0])]
-        projection = np.dot(pq, orientation_vector)
+        sums = projections + distance_to_pline
+        closest_point2line_idx = np.argmin(sums)
+        projection = projections[closest_point2line_idx]
         return int(projection)
 
     def __select_closest_interpdist_within_circle(self, p, angle, points):
+        '''
+        Finds interline distances
+        '''
         rs = np.array([32, 64, 128, 256])
         points = np.array([a for a in points if p[0] != a[0] and p[1] != a[1]])
         for radius in rs:
@@ -224,38 +189,23 @@ class BaselineBuilder():
         '''
         return [Si for Si in P if Si != Sx]
 
-    def __small_distance(self, S1, S2):
-        for pk in S1.keys():
-            for qk in S2.keys():
-                if self.__L2_norm(pk, qk) < 20:
-                    return True
-
-    def __cluster_points(self, states, Bs):
+    def __cluster_points(self, states, Bs, N):
         S0 = states.copy()
         P_star = [S0] 
-        unconnected_ps = []
-        for p in states:
-            NVs = self.__get_point_neighbours(N, p)
+        for p, v in states.items():
+            NVs = get_point_neighbors(N, p)
             nv_connectivity = []
-            p_state = {p: states[p]}
+            p_state = {p: v}
             for nv in NVs:
                 q = tuple(nv.astype(int))
                 isSameOriented = (abs(states[p][0] - states[q][0]) % np.pi) <= np.pi/4
                 interpdist = self.__L2_norm(p, q)
                 # if not following the skeleton - skip
                 if isSameOriented and interpdist < 20:
-                    nv_connectivity.append([q, self.__compute_connectivity((p,q), Bs)])
+                    nv_connectivity.append(q)
             if len(nv_connectivity) == 0:
-                unconnected_ps.append(p)
                 continue
-            strongest_NVs = np.array(nv_connectivity)
-            strongest_NVs[::-1,1].sort()
-            if len(strongest_NVs) > 1 and strongest_NVs[1,1]/(strongest_NVs[0,1]+np.finfo(float).eps) > 0.3:
-                strongest_NVs = strongest_NVs[0:2, 0]
-            else:
-                strongest_NVs = [strongest_NVs[0, 0]]
-
-            for q in strongest_NVs:
+            for q in nv_connectivity:
                 p_idx = self.__find_cluster_index(p, P_star)
                 q_idx = self.__find_cluster_index(q, P_star)
                 q_state = {q: states[q]}
@@ -288,35 +238,17 @@ class BaselineBuilder():
                     P_star[p_idx] = union_set
                     P_star = self.__remove_cfpl(Sj, P_star)
                 # Otherwise - ignore since both points are in the same cluster
-
-        # Fix connectivity mistakes in skeleton - if distance between segements is no larger than the discretization upperlimit - the clusters should be merged. Otherwise it is a mistake of ARU-Net
-        n = len(P_star)
-        i = 1
-        while i < n:
-            j=i+1
-            wasMerged = False
-            while j < n:
-                if self.__small_distance(P_star[i], P_star[j]):
-                    P_star[i] |= P_star[j]
-                    del P_star[j]
-                    n -= 1
-                    wasMerged = True
-                else:
-                    j += 1
-            if not wasMerged:
-                i += 1
-        P_star = [set_i for set_i in P_star if len(set_i) >= 5]
         return P_star
 
     def run(self, img):
         B = self.predictor.run(img)
         Bb = (B > 0.2) * 1
-        Bs = self.__skeletonize(Bb)
+        Bs = skeletonize(Bb)
         S, SI = self.__select_superpixels(B, Bs)
         print(f"{len(S)} superpixels extracted")
         N = Delaunay(S)
         angles = [self.__extract_lto(p, N, B) for p in S]
         states = {tuple(p): (angles[i], self.__select_closest_interpdist_within_circle(p, angles[i], S)) for i, p in enumerate(S)}
-        clusters = self.__cluster_points(states, Bs)
+        clusters = self.__cluster_points(states, Bs, N)
         print(f"{len(clusters)} line clusters generated")
         return clusters, N
