@@ -30,7 +30,7 @@ class NHMDDataset(Dataset):
         df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
         if len(df.columns) > 2:
             del df[2]
-        df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
+#        df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
         self.data = df
         print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
         self.max_length = max_length
@@ -63,6 +63,8 @@ class NHMDDataset(Dataset):
         img_transformed = transform(image=image)['image']
         pixel_values = self.processor(img_transformed, return_tensors="pt").pixel_values
         pixel_values = pixel_values.squeeze()
+        if text == None:
+            print(file_name)
         labels = self.processor.tokenizer(text,
                                           padding="max_length",
                                           max_length=self.max_length,
@@ -81,7 +83,7 @@ class NHMDDataset(Dataset):
         t_medium = A.Compose([
             A.Rotate(5, border_mode=cv2.BORDER_REPLICATE, p=0.2),
             A.Perspective((0.01, 0.05), pad_mode=cv2.BORDER_REPLICATE, p=0.2),
-            A.InvertImg(p=0.05),
+            A.InvertImg(p=0.1),
 
             A.OneOf([
                 A.Downscale(0.25, 0.5, interpolation=cv2.INTER_LINEAR),
@@ -98,7 +100,7 @@ class NHMDDataset(Dataset):
         t_heavy = A.Compose([
             A.Rotate(10, border_mode=cv2.BORDER_REPLICATE, p=0.2),
             A.Perspective((0.01, 0.05), pad_mode=cv2.BORDER_REPLICATE, p=0.2),
-            A.InvertImg(p=0.05),
+            A.InvertImg(p=0.1),
 
             A.OneOf([
                 A.Downscale(0.1, 0.2, interpolation=cv2.INTER_LINEAR),
@@ -121,18 +123,22 @@ if __name__ == '__main__':
 
     max_length = 300
 
-    processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("../data/NHMD_train", "valid", processor, max_length, augment=True)
-
-    sample = ds[420]
-    tensor_image = sample['pixel_values']
-    image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)
-    # Plot image ..
-    #image = Image.open("../data/NHMD_train" + ds['file_name'][0]).convert("RGB")
-    image = Image.fromarray(image)
-    image.save("test.png")
+    processor = get_processor()
+    ds = NHMDDataset("../data/NHMD_train_ft", "valid", processor, max_length, augment=True)
+    i=0
+    for idx, el in enumerate(ds):
+        test = el
+        i+=1
+        if i == 1000:
+            print(idx)
+            i=0
+    #sample = ds[420]
+    #tensor_image = sample['pixel_values']
+    #image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)
+    #image = Image.fromarray(image)
+    #image.save("test.png")
     
-    tokens = sample['labels']
-    tokens[tokens == -100] = processor.tokenizer.pad_token_id
-    text = processor.decode(tokens, skip_special_tokens=True)
-    print(f'{0}:\n{text}\n')
+    #tokens = sample['labels']
+    #tokens[tokens == -100] = processor.tokenizer.pad_token_id
+    #text = processor.decode(tokens, skip_special_tokens=True)
+    #print(f'{0}:\n{text}\n')
