@@ -367,12 +367,12 @@ class CNNTransformerHybrid(pl.LightningModule):
 
     def _calculate_loss(self, batch, mode="train"):
         # Fetch data and transform categories to one-hot vectors
-        data, labels = batch
-        batch_size = data.shape[0]  # data.shape == torch.Size([8, 40, 320])
+        data, labels, origw = batch
+        batch_size = data.shape[0]  # data.shape == torch.Size([8, 40, 200])
         x_train = data.view(data.shape[0], 1, data.shape[1], data.shape[2])
-        input_lengths = torch.IntTensor(batch_size).fill_(60)
+        input_lengths = torch.IntTensor(batch_size).fill_(50)
         target_lengths = torch.IntTensor([len(t) for t in labels])
-        pred = self.forward(x_train) # pred.shape == torch.Size([8, 60, 91]) => (batch_size, input_length, no_of_classes)
+        pred = self.forward(x_train, origw) # pred.shape == torch.Size([8, 50, 91]) => (batch_size, input_length, no_of_classes)
         pred = pred.permute(1, 0, 2) # we need (input_length, batch_size, no_of_classes)
         loss = self.criterion(pred, labels, input_lengths, target_lengths)
         # Logging
@@ -398,6 +398,12 @@ class CNNTransformerHybrid(pl.LightningModule):
         processed = 0
         step = 60
         for element in batches:
+            if w/4 >= element.shape[0]:
+                if len(width_stack) == 0:
+                    cat_features.append(element)
+                    break
+                w = width_stack.pop()
+                continue
             if processed < target_size and processed + 60 < target_size:
                 # Process regular chunk
                 step = 60
@@ -469,7 +475,8 @@ class CNNTransformerHybrid(pl.LightningModule):
 
 
 print('Transformer test.')
-img = torch.randn(1, 40, 320)
+# img = torch.randn(1, 40, 320)
+img = torch.randn(1, 40, 200)
 img = img.float()
 model = CNNTransformerHybrid(backbone_input_dim = 1,
                              backbone_fib_dim = 64,
@@ -481,6 +488,6 @@ model = CNNTransformerHybrid(backbone_input_dim = 1,
                              lr = 5e-4,
                              warmup = 100,
                              dropout=0.1)
-result_shape = model(img, [240]).shape
-assert result_shape == torch.Size([1, 60, 91]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
+result_shape = model(img, [200]).shape
+assert result_shape == torch.Size([1, 50, 91]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
 print('Test passed.')
