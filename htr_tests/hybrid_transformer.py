@@ -15,7 +15,7 @@ from itertools import repeat
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+from torch.nn import CTCLoss
 
 class FusedInvertedBottleneck(nn.Module):
     def __init__(self, in_channels, out_channels, expansion_factor):
@@ -313,6 +313,7 @@ class CNNTransformerHybrid(pl.LightningModule):
                        model_dim,
                        num_heads,
                        num_layers,
+                       vocab_size,
                        lr,
                        warmup,
                        max_iters=2000,
@@ -332,6 +333,8 @@ class CNNTransformerHybrid(pl.LightningModule):
             Number of heads to use in the Multi-Head Attention blocks.
         num_layers : integer
             Number of encoder blocks to use.
+        vocab_size : integer
+            Vocabulary size
         lr : integer
             Learning rate in the optimizer.
         warmup : integer
@@ -344,6 +347,7 @@ class CNNTransformerHybrid(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self._create_model()
+        self.criterion = CTCLoss(zero_infinity=True)
 
     def _create_model(self):
         # Input dim -> Model dim
@@ -354,26 +358,26 @@ class CNNTransformerHybrid(pl.LightningModule):
         self.positional_encoding = PositionalEncoding(d_model=self.hparams.model_dim)
 
         self.encoder = TransformerEncoder(num_layers=self.hparams.num_layers,
-                                              input_dim=self.hparams.model_dim,
-                                              feedforward_dim=2*self.hparams.model_dim,
-                                              num_heads=self.hparams.num_heads,
-                                              dropout=self.hparams.dropout)
+                                            input_dim=self.hparams.model_dim,
+                                            feedforward_dim=2*self.hparams.model_dim,
+                                            num_heads=self.hparams.num_heads,
+                                            dropout=self.hparams.dropout)
+        self.linear = nn.Linear(self.hparams.model_dim, self.hparams.vocab_size)
 
 
     def _calculate_loss(self, batch, mode="train"):
         # Fetch data and transform categories to one-hot vectors
-        inp_data, labels = batch
-        inp_data = F.one_hot(inp_data, num_classes=self.hparams.num_classes).float()
-
-        # Perform prediction and calculate loss and accuracy
-        preds = self.forward(inp_data, add_positional_encoding=True)
-        loss = F.ctc_loss(preds.view(-1,preds.size(-1)), labels.view(-1))
-        acc = (preds.argmax(dim=-1) == labels).float().mean()
-
+        data, labels = batch
+        batch_size = data.shape[0]  # data.shape == torch.Size([8, 40, 320])
+        x_train = data.view(data.shape[0], 1, data.shape[1], data.shape[2])
+        input_lengths = torch.IntTensor(batch_size).fill_(60)
+        target_lengths = torch.IntTensor([len(t) for t in labels])
+        pred = self.forward(x_train) # pred.shape == torch.Size([8, 60, 91]) => (batch_size, input_length, no_of_classes)
+        pred = pred.permute(1, 0, 2) # we need (input_length, batch_size, no_of_classes)
+        loss = self.criterion(pred, labels, input_lengths, target_lengths)
         # Logging
         self.log(f"{mode}_loss", loss)
-        self.log(f"{mode}_acc", acc)
-        return loss, acc
+        return loss
 
     def concat_chunks(self, batches, width_stack):
         '''
@@ -428,7 +432,10 @@ class CNNTransformerHybrid(pl.LightningModule):
         if add_positional_encoding:
             x = self.positional_encoding(x)
         x = self.encoder(x, mask=mask)
-        return self.concat_chunks(x, img_widths)
+        x = self.concat_chunks(x, img_widths)
+        x = self.linear(x)
+        output = F.log_softmax(x, dim=2)
+        return output
 
     @torch.no_grad()
     def get_attention_maps(self, x, mask=None, add_positional_encoding=True):
@@ -452,8 +459,7 @@ class CNNTransformerHybrid(pl.LightningModule):
         return [optimizer], [{'scheduler': lr_scheduler, 'interval': 'step'}]
 
     def training_step(self, batch, batch_idx):
-        loss, _ = self._calculate_loss(batch, mode="train")
-        return loss
+        return self._calculate_loss(batch, mode="train")
 
     def validation_step(self, batch, batch_idx):
         _ = self._calculate_loss(batch, mode="val")
@@ -471,9 +477,10 @@ model = CNNTransformerHybrid(backbone_input_dim = 1,
                              model_dim = 256,
                              num_heads = 4,
                              num_layers = 16,
+                             vocab_size = 91,
                              lr = 5e-4,
                              warmup = 100,
                              dropout=0.1)
 result_shape = model(img, [240]).shape
-assert result_shape == torch.Size([1, 60, 256]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
+assert result_shape == torch.Size([1, 60, 91]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
 print('Test passed.')
