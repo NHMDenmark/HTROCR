@@ -21,7 +21,7 @@ def run_evaluate():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained("./out/nhmd_small_ft_e", "./out/nhmd_small_ft_d")
+    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained("./out/nhmd_small_e", "./out/nhmd_small_d")
     model.to(device)
 
     cer = load_metric('cer')
@@ -47,7 +47,7 @@ def run_evaluate():
 
     final_score = cer.compute()
     print(final_score)
-    with open("results.txt", "w") as f:
+    with open("results_350k.txt", "w") as f:
         f.write(preds)
 
 if __name__ == '__main__':

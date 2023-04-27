@@ -6,3 +6,7 @@ articles/
 database/fonts/
 handwriting_line_generation
 TextRecognitionDataGenerator
+*.log
+out
+out1
+wandb

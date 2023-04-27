@@ -10,8 +10,13 @@ import shutil
     
 def copy_images(lines, prefix, in_collection_path, out_image_path_dir):
     for line in lines:
+        if in_collection_path == out_image_path_dir:
+            continue
         file = line.split('\t')[0]
-        src_file = os.path.join(in_collection_path, 'image', file)
+        if os.path.isdir(os.path.join(in_collection_path, 'image')):
+            src_file = os.path.join(in_collection_path, 'image', file)
+        else:
+            src_file = os.path.join(in_collection_path, 'lines', file)
         dst_file = os.path.join(out_image_path_dir, prefix + file)
         shutil.copy(src_file, dst_file)
 
@@ -43,15 +48,17 @@ def generate(config):
     collection_labels = []
     for index, subset in enumerate(db_collection):
         subset_size = db_collection[subset]
-        with open(os.path.join(subset, 'gt_train.txt'), 'r') as r:
+        f = 'gt_train.txt' #if index+1 != len(db_collection) else 'gt_train_full.txt'
+        with open(os.path.join(subset, f), 'r') as r:
             lines = r.readlines()
             if subset_size != -1:
                 lines = random.sample(lines, subset_size)
-            collection_prefix = "source_{}_".format(index)
+            collection_prefix = "collection_{}_".format(index) #if index+1 != len(db_collection) else ''
+#            if subset == "/home/kfx882/studies/train_db/generated_data/machine-text-coord" or subset == "/home/kfx882/studies/train_db/generated_data/machine-text-taxon":
             copy_images(lines, collection_prefix, subset, image_path_dir)
             collection_labels += [collection_prefix+l for l in lines]
     random.shuffle(collection_labels)
-    val_set = random.sample(collection_labels, 5000)
+    val_set = random.sample(collection_labels, 10000)
     train_set = [element for element in collection_labels if element not in val_set]
     with open(os.path.join(database_path, train_labels_file), 'w') as w:
         w.write("".join(train_set))
