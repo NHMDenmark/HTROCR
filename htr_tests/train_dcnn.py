@@ -3,7 +3,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import utils.device as device
 from data_processors.emnist_data_processor import prepare_data
-from models.dcnn_ctc import DCNNEncoder
+from dcnn_ctc import DCNNEncoder
 import matplotlib.pyplot as plt
 
 @torch.no_grad()
@@ -58,7 +58,7 @@ def fit(epochs, max_lr, model, train_loader, val_loader,
     return history
 
 def train():
-    epochs = 5
+    epochs = 3
     max_lr = 0.01
     grad_clip = 0.1
     weight_decay = 1e-4

@@ -13,7 +13,7 @@ def run_evaluate():
     encoder_name = 'facebook/deit-tiny-patch16-224'
     decoder_name = 'xlm-roberta-base'
 
-    processor = get_processor()
+    processor = get_processor("microsoft/trocr-small-handwritten")#, 'xlm-roberta-base')
     ds = NHMDDataset("../../unilm/trocr/NHMD_GT", "test", processor, max_length, augment=False)
 #    ds = NHMDDataset("../data/NHMD_train", "valid", processor, 300, False)
     subset = Subset(ds,range(16))
@@ -21,7 +21,9 @@ def run_evaluate():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained("./out/nhmd_small_e", "./out/nhmd_small_d")
+#    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained("./nhmd_out/nhmd_base_roberta_271k_e", "./nhmd_out/nhmd_base_roberta_271k_d")
+#    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained("./nhmd_out/nhmd_small_full_271k_e", "./nhmd_out/nhmd_small_full_271k_d")
+    model = VisionEncoderDecoderModel.from_pretrained("./nhmd_out/small_full/nhmd_small_full_final")
     model.to(device)
 
     cer = load_metric('cer')
@@ -47,8 +49,8 @@ def run_evaluate():
 
     final_score = cer.compute()
     print(final_score)
-    with open("results_350k.txt", "w") as f:
-        f.write(preds)
+    # with open("results_nhmd_base_full_271k_cp.txt", "w") as f:
+    #     f.write(preds)
 
 if __name__ == '__main__':
     run_evaluate()

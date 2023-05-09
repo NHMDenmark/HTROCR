@@ -16,6 +16,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch.nn import CTCLoss
+from torchmetrics import CharErrorRate
+from itertools import groupby
+import utils.device as devutils
 
 class FusedInvertedBottleneck(nn.Module):
     def __init__(self, in_channels, out_channels, expansion_factor):
@@ -116,10 +119,11 @@ class Backbone(nn.Module):
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
         self.fib_layers = nn.ModuleList([FusedInvertedBottleneck(out_channels, out_channels, expansion_factor) for _ in range(10)])
-        self.reduce_block = ReduceBlock(out_channels, 10, 3, 6, 10)
+#        self.reduce_block = ReduceBlock(out_channels, 10, 3, 6, 10)
+        self.reduce_block = ReduceBlock(out_channels, 7, 3, 6, 7)
 
     def forward(self, x):
-        x = x.unsqueeze(1) # add channel dimension
+#        x = x.unsqueeze(1) # add channel dimension
         out = self.space_to_depth(x)
         out = self.depthwise_conv(out)
         out = self.bn1(out)
@@ -130,15 +134,16 @@ class Backbone(nn.Module):
         for layer in self.fib_layers:
             out = layer(out)
         out = self.reduce_block(out)
+#        print('after backbone', out.shape)
         return out
 
-print('Running Backbone test.')
-img = torch.randn(1, 40, 768)
-img = img.float()
-model = Backbone(1, 64, 8)
-result_shape = model(img).shape
-assert result_shape == torch.Size([1, 256, 1, 192]), f'Shapes do not match! Received {result_shape}'
-print('Backbone test passed.')
+# print('Running Backbone test.')
+# img = torch.randn(1, 1, 40, 768)
+# img = img.float()
+# model = Backbone(1, 64, 8)
+# result_shape = model(img).shape
+# assert result_shape == torch.Size([1, 256, 1, 192]), f'Shapes do not match! Received {result_shape}'
+# print('Backbone test passed.')
 
 '''
 The following Transformer encoder is based on the content from
@@ -171,8 +176,16 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe, persistent=False)
 
     def forward(self, x):
+#        print('pre pe',x.size())
+#        print('pe',self.pe.size())
         x = x + self.pe[:, :x.size(1)]
+#        print('post pe', x.size())
         return x
+
+#img = torch.randn(1, 32, 256)
+#img = img.float()
+#model = PositionalEncoding(256)
+#model(img)
 
 def scaled_dot_product(q, k, v, mask=None):
     '''
@@ -238,7 +251,6 @@ class MultiheadAttention(nn.Module):
         values = values.permute(0, 2, 1, 3) # [Batch, SeqLen, Head, Dims]
         values = values.reshape(batch_size, seq_length, self.embed_dim)
         o = self.o_proj(values)
-
         if return_attention:
             return o, attention
         else:
@@ -282,7 +294,6 @@ class EncoderBlock(nn.Module):
         linear_out = self.linear_net(x)
         x = x + self.dropout(linear_out)
         x = self.norm2(x)
-
         return x
 
 class TransformerEncoder(nn.Module):
@@ -303,8 +314,77 @@ class TransformerEncoder(nn.Module):
             x = l(x)
         return attention_maps
 
+class TestBackbone(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=(3, 3))
+        self.norm1 = nn.InstanceNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 32, kernel_size=(3, 3), stride=2)
+        self.norm2 = nn.InstanceNorm2d(32)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=(3, 3))
+        self.norm3 = nn.InstanceNorm2d(64)
+        self.conv4 = nn.Conv2d(64, 64, kernel_size=(3, 3), stride=2)
+        self.norm4 = nn.InstanceNorm2d(64)
+        # self.gru_input_size = 4 * 64
+        # self.gru = nn.GRU(self.gru_input_size, 128, 2, batch_first=True, bidirectional=True)
+        # self.fc = nn.Linear(128 * 2, 11)
+    
+    def forward(self, xb):
+        batch_size = xb.shape[0]
+        out = self.conv1(xb)
+        out = self.norm1(out)
+        out = F.leaky_relu(out)
+        out = self.conv2(out)
+        out = self.norm2(out)
+        out = F.leaky_relu(out)
+        out = self.conv3(out)
+        out = self.norm3(out)
+        out = F.leaky_relu(out)
+        out = self.conv4(out)
+        out = self.norm4(out)
+        out = F.leaky_relu(out)
+        out = out.permute(0, 3, 2, 1)
+        out = out.reshape(batch_size, -1, 256)
+        # out, _ = self.gru(xb)
+        # out = torch.stack([F.log_softmax(self.fc(out[i]), dim=-1) for i in range(out.shape[0])])
+        return out
 
+class Swish(nn.Module):
+    def forward(self, x):
+        return x * torch.sigmoid(x)
+    
+class BlockCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_blocks = nn.Sequential(
+            self.block(1, 64, stride=(2, 2)),
+            self.block(64, 128, stride=(2, 2)),
+            self.block(128, 256, stride=(2, 1)),
+            self.block(256, 512, stride=(4, 1)),
+        )
 
+    def block(self, in_channels, out_channels, stride=2):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            Swish(),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels),
+            Swish(),
+        )
+
+    def forward(self, images, *args, **kwargs):
+        batch_size = images.size(0)
+        out = self.conv_blocks(images)
+        out = out.permute(0,3,2,1)
+        out = out.reshape(batch_size, -1, 512)
+        return out
+
+# img = torch.randn(1, 1, 32, 100)
+# img = img.float()
+# model = BlockCNN()
+# model(img)
+    
 class CNNTransformerHybrid(pl.LightningModule):
 
     def __init__(self, backbone_input_dim, 
@@ -347,14 +427,16 @@ class CNNTransformerHybrid(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self._create_model()
-        self.criterion = CTCLoss(zero_infinity=True)
+        self.blank_label = 10
+        self.criterion = CTCLoss(blank=self.blank_label, reduction='mean', zero_infinity=True)
+        self.cer = CharErrorRate()
 
     def _create_model(self):
         # Input dim -> Model dim
-        self.backbone = Backbone(self.hparams.backbone_input_dim, 
-                                 self.hparams.backbone_fib_dim, 
-                                 self.hparams.backbone_expansion_factor)
-
+         # self.backbone = Backbone(self.hparams.backbone_input_dim, 
+         #                          self.hparams.backbone_fib_dim, 
+         #                          self.hparams.backbone_expansion_factor)
+        self.backbone = BlockCNN()
         self.positional_encoding = PositionalEncoding(d_model=self.hparams.model_dim)
 
         self.encoder = TransformerEncoder(num_layers=self.hparams.num_layers,
@@ -365,18 +447,77 @@ class CNNTransformerHybrid(pl.LightningModule):
         self.linear = nn.Linear(self.hparams.model_dim, self.hparams.vocab_size)
 
 
+    def forward(self, x, mask=None, add_positional_encoding=True):
+        '''
+        Parameters
+        ----------
+        x : integer
+            Batch of input image chunks.
+        img_widths : integer
+            Original image widths for reconstruction.
+        '''
+        x = self.backbone(x)
+#        print(x.shape)
+#        print('backbone out shape',x.shape)
+        # Input features of shape [Batch, Model_dim, 1, SeqLen]
+#        x = x.squeeze(2)
+        # Convert to [Batch, SeqLen, Model_dim]
+#        x = x.permute(0, 2, 1)
+#        x = self.input_net(x)
+        if add_positional_encoding:
+            x = self.positional_encoding(x)
+        x = self.encoder(x, mask=mask) # out => [Batch, SeqLen, Model_dim]
+#        print('encoder out', x.shape)
+#        x = self.concat_chunks(x, img_widths)
+#        x = self.linear(x)
+#        print('linear out', x.shape)
+        output = torch.stack([F.log_softmax(self.linear(x[i]), dim=-1) for i in range(x.shape[0])])
+        return output
+    
+    def accuracy(self, outputs, labels):
+        batch_size = outputs.shape[1] # batch size param after permutation
+        _, max_index = torch.max(outputs, dim=2)
+        cer_scores = []
+        val_correct = 0
+        val_total = 0
+        for i in range(batch_size):
+            raw_prediction = list(max_index[:, i].detach().cpu().numpy())
+            prediction = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != self.blank_label])
+            prediction = devutils.to_device(prediction, devutils.default_device())
+            if len(prediction) == len(labels[i]) and torch.all(prediction.eq(labels[i])):
+                val_correct += 1
+            val_total += 1
+            pred_str = "".join(str(i) for i in prediction.tolist())
+            label_str = "".join(str(i) for i in labels[i].tolist())
+            if len(prediction) < len(labels[i]):
+                num_to_pad = labels[i].shape[0] - prediction.shape[0]
+                pred_str += "-" * num_to_pad
+            elif len(prediction) > len(labels[i]):
+                pred_str = pred_str[:len(label_str)]
+            cer_score = self.cer(pred_str, label_str)
+            cer_scores.append(cer_score)
+        acc = torch.tensor(val_correct/val_total)
+        cer_scores = torch.tensor(cer_scores)
+        cer_mean = torch.mean(cer_scores)
+        return acc, cer_mean
+
     def _calculate_loss(self, batch, mode="train"):
-        # Fetch data and transform categories to one-hot vectors
-        data, labels, origw = batch
+        data, labels = batch
         batch_size = data.shape[0]  # data.shape == torch.Size([8, 40, 200])
         x_train = data.view(data.shape[0], 1, data.shape[1], data.shape[2])
-        input_lengths = torch.IntTensor(batch_size).fill_(50)
+        input_lengths = torch.IntTensor(batch_size).fill_(40)
         target_lengths = torch.IntTensor([len(t) for t in labels])
-        pred = self.forward(x_train, origw) # pred.shape == torch.Size([8, 50, 91]) => (batch_size, input_length, no_of_classes)
+        pred = self.forward(x_train) # pred.shape == torch.Size([8, 50, 91]) => (batch_size, input_length, no_of_classes)
+        
         pred = pred.permute(1, 0, 2) # we need (input_length, batch_size, no_of_classes)
         loss = self.criterion(pred, labels, input_lengths, target_lengths)
+        acc, cer = self.accuracy(pred,labels)
+
         # Logging
         self.log(f"{mode}_loss", loss)
+        self.log(f"{mode}_acc", acc)        
+        self.log(f"{mode}_cer", cer)        
+
         return loss
 
     def concat_chunks(self, batches, width_stack):
@@ -392,7 +533,8 @@ class CNNTransformerHybrid(pl.LightningModule):
         '''
         cat_features = []
         padding = 10
-        w = width_stack.pop()
+        w = width_stack[0]
+        width_stack = width_stack[1:]
         cat_feature = torch.zeros((int(w/4), batches.size(2)))
         target_size = w/4
         processed = 0
@@ -402,7 +544,8 @@ class CNNTransformerHybrid(pl.LightningModule):
                 if len(width_stack) == 0:
                     cat_features.append(element)
                     break
-                w = width_stack.pop()
+                w = width_stack[0]
+                width_stack = width_stack[1:]
                 continue
             if processed < target_size and processed + 60 < target_size:
                 # Process regular chunk
@@ -419,29 +562,9 @@ class CNNTransformerHybrid(pl.LightningModule):
                     break
                 processed = 0
                 cat_feature = torch.zeros((int(w/4), batches.size(2)))
-                w = width_stack.pop()
+                w = width_stack[0]
+                width_stack = width_stack[1:]
         return torch.stack(cat_features, dim=0)
-
-    def forward(self, x, img_widths, mask=None, add_positional_encoding=True):
-        '''
-        Parameters
-        ----------
-        x : integer
-            Batch of input image chunks.
-        img_widths : integer
-            Original image widths for reconstruction.
-        '''
-        x = self.backbone(x)
-        # Input features of shape [Batch, SeqLen, input_dim]
-        x = x.squeeze(2)
-        x = x.permute(0, 2, 1)
-        if add_positional_encoding:
-            x = self.positional_encoding(x)
-        x = self.encoder(x, mask=mask)
-        x = self.concat_chunks(x, img_widths)
-        x = self.linear(x)
-        output = F.log_softmax(x, dim=2)
-        return output
 
     @torch.no_grad()
     def get_attention_maps(self, x, mask=None, add_positional_encoding=True):
@@ -457,7 +580,6 @@ class CNNTransformerHybrid(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.parameters(), lr=self.hparams.lr)
-
         # Apply lr scheduler per step
         lr_scheduler = CosineWarmupScheduler(optimizer,
                                              warmup=self.hparams.warmup,
@@ -465,7 +587,8 @@ class CNNTransformerHybrid(pl.LightningModule):
         return [optimizer], [{'scheduler': lr_scheduler, 'interval': 'step'}]
 
     def training_step(self, batch, batch_idx):
-        return self._calculate_loss(batch, mode="train")
+        loss = self._calculate_loss(batch, mode="train")
+        return loss
 
     def validation_step(self, batch, batch_idx):
         _ = self._calculate_loss(batch, mode="val")
@@ -474,20 +597,23 @@ class CNNTransformerHybrid(pl.LightningModule):
         _ = self._calculate_loss(batch, mode="test")
 
 
-print('Transformer test.')
+# print('Transformer test.')
 # img = torch.randn(1, 40, 320)
-img = torch.randn(1, 40, 200)
-img = img.float()
-model = CNNTransformerHybrid(backbone_input_dim = 1,
-                             backbone_fib_dim = 64,
-                             backbone_expansion_factor = 8,
-                             model_dim = 256,
-                             num_heads = 4,
-                             num_layers = 16,
-                             vocab_size = 91,
-                             lr = 5e-4,
-                             warmup = 100,
-                             dropout=0.1)
-result_shape = model(img, [200]).shape
-assert result_shape == torch.Size([1, 50, 91]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
-print('Test passed.')
+# img = torch.randn(1, 1, 40, 200)
+# img = torch.randn(1, 1, 32, 160)
+# img = img.float()
+# model = CNNTransformerHybrid(backbone_input_dim = 1,
+#                               backbone_fib_dim = 64,
+#                               backbone_expansion_factor = 8,
+#                               model_dim = 512,
+#                               num_heads = 4,
+#                               num_layers = 16,
+#                               vocab_size = 11,
+#                               lr = 5e-4,
+#                               warmup = 100,
+#                               dropout=0.1)
+# result_shape = model(img).shape
+# print(result_shape)
+
+#assert result_shape == torch.Size([1, 50, 91]), f'Transformer shape test check failed. Resulting shape {result_shape}.'
+#print('Test passed.')

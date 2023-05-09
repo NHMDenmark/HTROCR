@@ -46,17 +46,23 @@ def generate(config):
     valid_labels_file = 'gt_valid.txt'
     db_collection = config['db_collection']
     collection_labels = []
+    print("Number of collections", len(db_collection))
+    im_files = os.listdir(image_path_dir)
     for index, subset in enumerate(db_collection):
+        print("Running collection", index)
+#        if index < 37:
+#            continue
         subset_size = db_collection[subset]
         f = 'gt_train.txt' #if index+1 != len(db_collection) else 'gt_train_full.txt'
         with open(os.path.join(subset, f), 'r') as r:
             lines = r.readlines()
-            if subset_size != -1:
-                lines = random.sample(lines, subset_size)
-            collection_prefix = "collection_{}_".format(index) #if index+1 != len(db_collection) else ''
+#            if subset_size != -1:
+#                lines = random.sample(lines, subset_size)
+            collection_prefix = "d{}_".format(index) #if index+1 != len(db_collection) else ''
 #            if subset == "/home/kfx882/studies/train_db/generated_data/machine-text-coord" or subset == "/home/kfx882/studies/train_db/generated_data/machine-text-taxon":
-            copy_images(lines, collection_prefix, subset, image_path_dir)
-            collection_labels += [collection_prefix+l for l in lines]
+#            copy_images(lines, collection_prefix, subset, image_path_dir)
+            
+            collection_labels += [collection_prefix+l for l in lines if collection_prefix+l.split('\t')[0] in im_files]
     random.shuffle(collection_labels)
     val_set = random.sample(collection_labels, 10000)
     train_set = [element for element in collection_labels if element not in val_set]

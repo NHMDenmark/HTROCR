@@ -7,12 +7,10 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from TrOCREDProcessor import get_processor
 from transformers import TrOCRProcessor
 
 class NHMDDataset(Dataset):
-    def __init__(self, path, dbtype, processor, max_length, augment=False):
-        self.processor = processor
+    def __init__(self, path, dbtype, height=40, augment=False):
         self.path = path
         labels_file = f'gt_{dbtype}.txt'
         image_dir = 'image'
@@ -28,24 +26,24 @@ class NHMDDataset(Dataset):
             data.append(elements)
         df = pd.DataFrame(data)
         df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
+        df['text'].fillna(' ', inplace=True)
         if len(df.columns) > 2:
             del df[2]
-#        df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
         self.data = df
         print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
-        self.max_length = max_length
+        self.height = height
         self.augment = augment
         self.transform_medium, self.transform_heavy = self.__generate_transforms()
 
     def __len__(self):
         return len(self.data)
+    
+    def expand_img(self, img, h, w):
+        expanded = Image.new("L", (w, h), color=255)
+        expanded.paste(img)
+        return expanded
 
-    def __getitem__(self, idx):
-        element = self.data.iloc[idx]
-        text = element.text
-        file_name = element.file_name
-        img_path = os.path.join(self.path, "image", file_name)
-
+    def read_image(self, img_path):
         if self.augment:
             medium_p = 0.8
             heavy_p = 0.02
@@ -57,27 +55,25 @@ class NHMDDataset(Dataset):
                 'heavy': self.transform_heavy,
             }[transform_variant]
         else:
-            transform = A.ToGray(always_apply=True)
-        img = Image.open(img_path).convert("RGB")
+            transform = A.NoOp(always_apply=True)
+        img = Image.open(img_path).convert("L")
+        w, h = img.size
+        aspect_ratio = self.height / h
+        new_width = round(w * aspect_ratio)
+        img = img.resize((new_width, self.height))
+        if new_width < 40:
+            img = self.expand_img(img, self.height, 40)
         image = np.array(img)
         img_transformed = transform(image=image)['image']
-        pixel_values = self.processor(img_transformed, return_tensors="pt").pixel_values
-        pixel_values = pixel_values.squeeze()
-        if text == None:
-            print(file_name)
-        labels = self.processor.tokenizer(text,
-                                          padding="max_length",
-                                          max_length=self.max_length,
-                                          truncation=True).input_ids
-        labels = np.array(labels)
-        # important: make sure that PAD tokens are ignored by the loss function
-        labels[labels == self.processor.tokenizer.pad_token_id] = -100
-        encoding = {
-            "pixel_values": pixel_values,
-            "labels": torch.tensor(labels),
-        }
+        return img_transformed
 
-        return encoding
+    def __getitem__(self, idx):
+        element = self.data.iloc[idx]
+        text = element.text
+        file_name = element.file_name
+        img_path = os.path.join(self.path, "image", file_name)
+        img = self.read_image(img_path)
+        return (img, text)
 
     def __generate_transforms(self):
         t_medium = A.Compose([
@@ -115,30 +111,3 @@ class NHMDDataset(Dataset):
         ])
 
         return t_medium, t_heavy
-
-if __name__ == '__main__':
-    # Test if dataset extraction works
-    encoder_name = 'facebook/deit-tiny-patch16-224'
-    decoder_name = 'pstroe/roberta-base-latin-cased'
-
-    max_length = 300
-
-    processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("../data/NHMD_train_final", "train", processor, max_length, augment=True)
-    i=0
-    for idx, el in enumerate(ds):
-        test = el
-        i+=1
-        if i == 1000:
-            print(idx)
-            i=0
-    #sample = ds[420]
-    #tensor_image = sample['pixel_values']
-    #image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)
-    #image = Image.fromarray(image)
-    #image.save("test.png")
-    
-    #tokens = sample['labels']
-    #tokens[tokens == -100] = processor.tokenizer.pad_token_id
-    #text = processor.decode(tokens, skip_special_tokens=True)
-    #print(f'{0}:\n{text}\n')
