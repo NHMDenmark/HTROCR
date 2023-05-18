@@ -66,9 +66,10 @@ class NHMDDataset(Dataset):
         if text == None:
             print(file_name)
         labels = self.processor.tokenizer(text,
-                                          padding="max_length",
-                                          max_length=self.max_length,
-                                          truncation=True).input_ids
+                                        padding="max_length",
+                                        max_length=self.max_length,
+                                        truncation=True).input_ids
+        # print()
         labels = np.array(labels)
         # important: make sure that PAD tokens are ignored by the loss function
         labels[labels == self.processor.tokenizer.pad_token_id] = -100
@@ -116,22 +117,22 @@ class NHMDDataset(Dataset):
 
         return t_medium, t_heavy
 
-if __name__ == '__main__':
-    # Test if dataset extraction works
-    encoder_name = 'facebook/deit-tiny-patch16-224'
-    decoder_name = 'pstroe/roberta-base-latin-cased'
+# if __name__  == '__main__':
+    # # Test if dataset extraction works
+    # encoder_name = 'microsoft/trocr-base-handwritten'
+    # decoder_name = 'xlm-roberta-base'
 
-    max_length = 300
+    # max_length = 300
 
-    processor = get_processor(encoder_name, decoder_name)
-    ds = NHMDDataset("../data/NHMD_train_final", "train", processor, max_length, augment=True)
-    i=0
-    for idx, el in enumerate(ds):
-        test = el
-        i+=1
-        if i == 1000:
-            print(idx)
-            i=0
+    # processor = get_processor(encoder_name, decoder_name)
+    # ds = NHMDDataset("../data/NHMD_train_final", "valid", processor, max_length, augment=True)
+    # i=0
+    # for idx, el in enumerate(ds):
+    #     test = el
+    #     i+=1
+    #     if i == 1000:
+    #         print(idx)
+    #         i=0
     #sample = ds[420]
     #tensor_image = sample['pixel_values']
     #image = ((tensor_image.cpu().numpy() + 1) / 2 * 255).clip(0, 255).astype(np.uint8).transpose(1, 2, 0)

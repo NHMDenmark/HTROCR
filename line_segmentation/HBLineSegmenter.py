@@ -1,4 +1,4 @@
-from LineSegmenter import LineSegmenter
+from line_segmentation.LineSegmenter import LineSegmenter
 import numpy as np
 from scipy.ndimage import grey_dilation
 from scipy import ndimage
@@ -9,12 +9,12 @@ from scipy.ndimage import binary_fill_holes
 from skimage.filters import threshold_otsu
 from PIL import Image, ImageDraw
 from scipy.spatial import ConvexHull
-from util import get_point_neighbors
+from line_segmentation.util import get_point_neighbors
 from skimage.color import rgb2gray
 
 # Height Based Line Segmenter
 class HBLineSegmenter(LineSegmenter):
-    def __init__(self, path="./config/default.json"):
+    def __init__(self, path="./line_segmentation/config/default.json"):
         super().__init__(path)
     
     def __get_line_bbox(self, Si):
@@ -56,10 +56,11 @@ class HBLineSegmenter(LineSegmenter):
         img = rgb2gray(np.array(resized_img))
         clusters, N = self.bbuilder.run(img)
         segmentations = []
+        region_coords = []
         for i in range(1, len(clusters)):
             Si = clusters[i]
             minx, miny, maxx, maxy, min_region = self.__get_line_bbox(Si)
-            label = img[miny:maxy+20, minx:maxx]/255
+            label = img[miny:maxy+20, minx:maxx]
             polygon_set = []
             mind = np.inf
             for p, (angle_rad, pixels) in Si.items():
@@ -74,4 +75,9 @@ class HBLineSegmenter(LineSegmenter):
             sorted_points = [tuple(polygon_set[i]) for i in hull.vertices]
             bbox = self.__generate_bbox(label, sorted_points)
             segmentations.append(bbox)
-        return segmentations
+            max_x = max(sorted_points[:,1])
+            min_x = min(sorted_points[:,1])
+            max_y = max(sorted_points[:,0])
+            min_y = min(sorted_points[:,0])
+            region_coords.append([min_x, max_x, min_y, max_y])
+        return segmentations, sorted_points, clusters, region_coords, scale

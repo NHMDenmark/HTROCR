@@ -2,8 +2,8 @@ import numpy as np
 from scipy.ndimage import binary_erosion, binary_opening
 from scipy.spatial import Delaunay
 from skimage.morphology import skeletonize
-from predictor.inference import Predictor
-from util import get_point_neighbors
+from line_segmentation.predictor.inference import Predictor
+from line_segmentation.util import get_point_neighbors
 from PIL import Image
 
 class BaselineBuilder():
@@ -245,10 +245,9 @@ class BaselineBuilder():
         Bb = (B > 0.2) * 1
         Bs = skeletonize(Bb)
         S, SI = self.__select_superpixels(B, Bs)
-        print(f"{len(S)} superpixels extracted")
         N = Delaunay(S)
         angles = [self.__extract_lto(p, N, B) for p in S]
         states = {tuple(p): (angles[i], self.__select_closest_interpdist_within_circle(p, angles[i], S)) for i, p in enumerate(S)}
         clusters = self.__cluster_points(states, Bs, N)
-        print(f"{len(clusters)} line clusters generated")
+        print(f"{len(S)} superpixels extracted; {len(clusters)} line clusters generated")
         return clusters, N

@@ -1,8 +1,10 @@
 import fire
+import os
 from dependency_injector import containers, providers
 from PreciseLineSegmenter import PreciseLineSegmenter
 from HBLineSegmenter import HBLineSegmenter
 from matplotlib import pyplot as plt
+from PIL import Image
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -19,8 +21,10 @@ def run(path='./config/default.json'):
 
     lines = segmenter.segment_lines("./demo/orig.jpg")
 
-    plt.imshow(lines[17], cmap='gray')
-    plt.show()
+    img = Image.fromarray(lines[17]*255).convert('L')
+    img.save('test.jpg')
+    # plt.imshow(lines[17], cmap='gray')
+    # plt.show()
 
 if __name__ == '__main__':
     fire.Fire(run)

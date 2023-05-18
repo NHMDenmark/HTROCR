@@ -120,11 +120,12 @@ class Backbone(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fib_layers = nn.ModuleList([FusedInvertedBottleneck(out_channels, out_channels, expansion_factor) for _ in range(10)])
 #        self.reduce_block = ReduceBlock(out_channels, 10, 3, 6, 10)
-        self.reduce_block = ReduceBlock(out_channels, 7, 3, 6, 7)
+        self.reduce_block = ReduceBlock(out_channels, 8, 3, 6, 8)
 
     def forward(self, x):
-#        x = x.unsqueeze(1) # add channel dimension
-        out = self.space_to_depth(x)
+        pad_width = (4 - (x.size(-1) % 4)) % 4
+        padded_tensor = F.pad(x, (0, pad_width))
+        out = self.space_to_depth(padded_tensor)
         out = self.depthwise_conv(out)
         out = self.bn1(out)
         out = self.relu(out)
@@ -134,14 +135,16 @@ class Backbone(nn.Module):
         for layer in self.fib_layers:
             out = layer(out)
         out = self.reduce_block(out)
-#        print('after backbone', out.shape)
+        out = out.squeeze(2)
+        out = out.permute(0, 2, 1)
         return out
 
 # print('Running Backbone test.')
-# img = torch.randn(1, 1, 40, 768)
-# img = img.float()
-# model = Backbone(1, 64, 8)
-# result_shape = model(img).shape
+img = torch.randn(1, 1, 32, 849)
+img = img.float()
+model = Backbone(1, 128, 8)
+result_shape = model(img).shape
+print(result_shape)
 # assert result_shape == torch.Size([1, 256, 1, 192]), f'Shapes do not match! Received {result_shape}'
 # print('Backbone test passed.')
 
@@ -383,8 +386,8 @@ class BlockCNN(nn.Module):
 # img = torch.randn(1, 1, 32, 100)
 # img = img.float()
 # model = BlockCNN()
-# model(img)
-    
+# print(model(img).shape)
+
 class CNNTransformerHybrid(pl.LightningModule):
 
     def __init__(self, backbone_input_dim, 

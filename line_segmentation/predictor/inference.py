@@ -18,7 +18,6 @@ class Predictor(object):
         self.graph = graph
 
     def run(self, img, gpu_device="0"):
-        
         session_conf = tf.compat.v1.ConfigProto()
         session_conf.gpu_options.visible_device_list = gpu_device
         with tf.compat.v1.Session(graph=self.graph, config=session_conf) as sess:

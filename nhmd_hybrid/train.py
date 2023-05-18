@@ -103,7 +103,6 @@ if __name__ == '__main__':
                                  num_heads = 8,
                                 num_layers = 3,
                                 num_labels = 154, # alphabet size
-                                vocab_size = 256,
                                         lr = 1e-4,
                                     warmup = 50,
                                    dropout = 0.1)

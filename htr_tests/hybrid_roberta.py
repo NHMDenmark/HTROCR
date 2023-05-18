@@ -11,103 +11,38 @@ from itertools import groupby
 import utils.device as devutils
 from encoder import PositionalEncoding, TransformerEncoder
 from backbone import BlockCNN
-from torchvision.models import resnet50
-from nhmdtokenizer import NHMDTokenizer
 
-class CNNTransformerHybrid(pl.LightningModule):
+class HybridSeq2SeqModel(pl.LightningModule):
 
-    def __init__(self, model_dim, num_heads, num_layers, num_labels, vocab_size, lr, warmup, tokenizer, max_iters=2000, dropout=0.1):
-        '''
-        Parameters
-        ----------
-        backbone_input_dim : integer
-            Input image channel dimensionality.
-        backbone_fib_dim : integer
-            Output dimensionality after fib layers.
-        backbone_expansion_factor : integer
-            Fused Inverted bottleneck layer expansion factor.
-        model_dim : integer
-            Hidden dimensionality to use inside the Transformer.
-        num_heads : integer
-            Number of heads to use in the Multi-Head Attention blocks.
-        num_layers : integer
-            Number of encoder blocks to use.
-        num_labels : integer
-            -
-        vocab_size : integer
-            Vocabulary size
-        lr : integer
-            Learning rate in the optimizer.
-        warmup : integer
-            Number of warmup steps. Usually between 50 and 500
-        tokenizer : integer
-            Tokenizer for label decoding
-        max_iters : integer
-            Number of maximum iterations the model is trained for.
-        dropout : float
-            Dropout in MLP and in-between layers ratio
-        '''
+    def __init__(self, encoder, decoder):
         super().__init__()
         self.save_hyperparameters()
-        self._create_model()
-        # Roberta tokenizer pad_token_id
-        self.tokenizer = tokenizer
-        self.blank_label = 0
-        self.criterion = CTCLoss(blank=self.blank_label, reduction='mean', zero_infinity=True)
-        self.cer = CharErrorRate()
+        self.encoder = encoder
+        # Remove logit classifier head and map to decoder input
+        self.encoder.dropout = nn.Dropout(0)
+        self.encoder.classifier = nn.Linear(512, 768)
+        self.decoder = decoder
 
-    def _create_model(self):
-        # Input dim -> Model dim
-        # self.backbone = BlockCNN()
-        self.positional_encoding = PositionalEncoding(d_model=self.hparams.model_dim)
-
-        self.encoder = TransformerEncoder(num_layers=self.hparams.num_layers,
-                                            input_dim=self.hparams.model_dim,
-                                            feedforward_dim=2*self.hparams.model_dim,
-                                            num_heads=self.hparams.num_heads,
-                                            dropout=self.hparams.dropout)
-        # self.linear = nn.Linear(self.hparams.model_dim, self.hparams.vocab_size)
-        self.dropout = nn.Dropout(self.hparams.dropout)
-        self.classifier = nn.Linear(self.hparams.model_dim, self.hparams.num_labels)
-        self.backbone = resnet50()
-        del self.backbone.fc
-
-        # create conversion layer
-        self.conv = nn.Conv2d(2048, self.hparams.model_dim, 1)
-
-
-    def get_feature(self,x):
-        x = self.backbone.conv1(x)
-        x = self.backbone.bn1(x)   
-        x = self.backbone.relu(x)
-        x = self.backbone.maxpool(x)
-
-        x = self.backbone.layer1(x)
-        x = self.backbone.layer2(x)
-        x = self.backbone.layer3(x)
-        x = self.backbone.layer4(x)
-        return x
-
-    def forward(self, x, mask=None, add_positional_encoding=True):
-        '''
-        Parameters
-        ----------
-        x : integer
-            Batch of input image chunks.
-        img_widths : integer
-            Original image widths for reconstruction.
-        '''
-        # x = self.backbone(x)
-        x = self.get_feature(x)
-        x = self.conv(x)
-        x = x.permute(0,3,2,1)
-        x = x.reshape(x.shape[0], -1, 512)
-        print('backbone x shape', x.shape)
+    def forward(self, batch):
+        images, labels, attn_images, attn_masks  = batch # batch.shape == torch.Size([32, 1, 40, some_width])
+        batch_size = images.shape[0] 
+        x = self.encoder(images, mask=attn_images)
+        decoder_outputs = self.decoder(
+            input_ids=labels,
+            attention_mask=attn_masks,
+            inputs_embeds=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            use_cache=None,
+            past_key_values=None,
+            return_dict=None
+        )
+        # print('backbone x shape', x.shape)
         if add_positional_encoding:
             x = self.positional_encoding(x)
         x = self.encoder(x, mask=mask) # out => [Batch, SeqLen, Model_dim]
         sequence_output = self.dropout(x)
-        logits = self.classifier(sequence_output) 
+        logits = self.classifier(sequence_output)
         return logits
     
     def accuracy(self, outputs, labels, attn_images, mode):
@@ -130,9 +65,9 @@ class CNNTransformerHybrid(pl.LightningModule):
                 decoded_text = prediction_idxs[: idx + 1]
             pred_str = self.tokenizer.decode(decoded_text, skip_special_tokens=True)
             label_str = self.tokenizer.decode(labels[i], skip_special_tokens=True)
-            # if mode == 'val':
-            #     self.log(f"Pred", str(pred_str), logger=True, sync_dist=True)
-            #     self.log(f"Actual", str(label_str), logger=True, sync_dist=True)
+            if mode == 'val':
+                self.log(f"Pred", pred_str, logger=True, sync_dist=True)
+                self.log(f"Actual", label_str, logger=True, sync_dist=True)
             cer_score = self.cer(pred_str, label_str)
             cer_scores.append(cer_score)
         cer_scores = torch.tensor(cer_scores)
@@ -164,7 +99,7 @@ class CNNTransformerHybrid(pl.LightningModule):
         # print('input_l', input_lengths.shape)
         # print('target_l', target_lengths.shape)
         loss = self.criterion(logits, labels, input_lengths.long(), target_lengths.long())
-        cer = self.accuracy(logits, labels, attn_images, mode)
+        cer = self.accuracy(logits, labels, attn_images)
 
         return loss, cer
 
@@ -192,19 +127,4 @@ class CNNTransformerHybrid(pl.LightningModule):
         loss, cer = self._calculate_loss(batch, mode="test")
         # Logging
         self.log(f"test_loss", loss, logger=True, sync_dist=True)
-        self.log(f"test_cer", cer, logger=True, sync_dist=True)
-
-img = torch.randn(1, 3, 32, 360)
-img = img.float()
-tokenizer = NHMDTokenizer()
-model = CNNTransformerHybrid(num_labels=154,
-                             tokenizer=tokenizer,
-                              model_dim = 512,
-                              num_heads = 4,
-                              num_layers = 16,
-                              vocab_size = 11,
-                              lr = 5e-4,
-                              warmup = 100,
-                              dropout=0.1)
-result_shape = model(img).shape
-print(result_shape)
+        self.log(f"test_cer", cer, logger=True, sync_dist=True)  

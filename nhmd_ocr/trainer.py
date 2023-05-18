@@ -1,20 +1,20 @@
 import fire
 import os
 import wandb
-from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, default_data_collator, Trainer, TrainingArguments, TrainerCallback
+from transformers import Seq2SeqTrainer, Seq2SeqTrainingArguments, default_data_collator, Trainer, TrainingArguments, EarlyStoppingCallback
 from NHMDDataset import NHMDDataset
 from NHMDEncoderDecoder import generate_model, generate_model_full, fine_tune_model
 from MetricProcessor import MetricProcessor
 import json
 import time
 import torch
-#os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
-class SaveCallback(TrainerCallback):
-    def on_save_checkpoint(self, args, state, control, **kwargs):
-        if state.is_world_process_zero:
-            state.trainer.model.encoder.save_pretrained("./nhmd_out/nhmd_base_full_271k_e")
-            state.trainer.model.decoder.save_pretrained("./nhmd_out/nhmd_base_full_271k_d")
+# class SaveCallback(TrainerCallback):
+#     def on_save_checkpoint(self, args, state, control, **kwargs):
+#         if state.is_world_process_zero:
+#             state.trainer.model.encoder.save_pretrained("./nhmd_out/nhmd_base_full_271k_e")
+#             state.trainer.model.decoder.save_pretrained("./nhmd_out/nhmd_base_full_271k_d")
 
 def NHMD_collator(ins):
     thedict = default_data_collator(ins)
@@ -35,8 +35,8 @@ def run(run_name=None):
         config = json.load(f)
     wandb.init(project="NHMD_OCR", config=config)
 
-#    model, processor = generate_model("microsoft/trocr-large-handwritten", "xlm-roberta-base", "microsoft/trocr-large-handwritten", config['max_len'])
-    model, processor = generate_model_full("microsoft/trocr-large-handwritten", "microsoft/trocr-large-handwritten", config['max_len'])
+    model, processor = generate_model("microsoft/trocr-base-handwritten", "xlm-roberta-base", "microsoft/trocr-base-handwritten", config['max_len'])
+    # model, processor = generate_model_full("microsoft/trocr-large-handwritten", "microsoft/trocr-large-handwritten", config['max_len'])
 #    model, processor = generate_model_full("nhmd_out/small_full/checkpoint-40000", "microsoft/trocr-small-handwritten", config['max_len'])    
 #    model, processor = fine_tune_model(config['decoder_name'])
     train_dataset = NHMDDataset(config['data_path'], "train", processor, config['max_len'], config['augment'])
@@ -61,12 +61,14 @@ def run(run_name=None):
         save_steps=config['save_steps'],
         eval_steps=config['eval_steps'],
         num_train_epochs=config['train_epochs'],
-        run_name=run_name
+        run_name=run_name,
+        # load_best_model_at_end = True,
+        # metric_for_best_model='cer'
     )
 
     trainer = Seq2SeqTrainer(
         model=model,
-#        callbacks=[SaveCallback()],
+        # callbacks=[EarlyStoppingCallback(3)],
         tokenizer=processor.feature_extractor,
         args=training_args,
         compute_metrics=metrics.compute_metrics,
@@ -76,10 +78,10 @@ def run(run_name=None):
 #        preprocess_logits_for_metrics=preprocess_logits_for_metrics
     )
 
-    trainer.train()
+    trainer.train("./nhmd_out/base_roberta/old/checkpoint-150000")
 
 
-    model.save_pretrained("./nhmd_out/large_full/nhmd_large_full_final")
+    model.save_pretrained("./nhmd_out/base_roberta/nhmd_base_roberta_final")
 
     wandb.finish()
 

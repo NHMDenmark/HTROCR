@@ -1,4 +1,4 @@
-from LineSegmenter import LineSegmenter
+from line_segmentation.LineSegmenter import LineSegmenter
 import numpy as np
 from scipy.ndimage import grey_dilation
 from scipy import ndimage
@@ -8,12 +8,11 @@ from scipy.ndimage import binary_fill_holes
 from skimage.filters import threshold_otsu
 from PIL import Image, ImageDraw
 from scipy.spatial import ConvexHull
-from util import get_point_neighbors
+from line_segmentation.util import get_point_neighbors
 from skimage.color import rgb2gray
-import time
 
 class PreciseLineSegmenter(LineSegmenter):
-    def __init__(self, path="./config/default.json"):
+    def __init__(self, path="./line_segmentation/config/default.json"):
         super().__init__(path)
 
     def __convex_hull_polygon(self, polygon_set):
@@ -167,9 +166,7 @@ class PreciseLineSegmenter(LineSegmenter):
         return masked_image
 
     def segment_lines(self, img_path):
-        print('Running segmentation...')
-        start = time.time()
-        scale = 0.33
+        scale = 0.25
         orig = Image.open(img_path)
         width, height = orig.size
         new_size = (int(width * scale), int(height * scale))
@@ -177,10 +174,12 @@ class PreciseLineSegmenter(LineSegmenter):
         img = rgb2gray(np.array(resized_img))
         clusters, N = self.bbuilder.run(img)
         segmentations = []
+        polygons = []
+        region_coords = []
         for i in range(1, len(clusters)):
             Si = clusters[i]
             minx, miny, maxx, maxy, min_region = self.__get_line_bbox(Si)
-            label = img[miny:maxy, minx:maxx]/255
+            label = img[miny:maxy, minx:maxx]
             thresh = threshold_otsu(label)
             thresholded = label < thresh
             height = self.__get_line_height(Si, N, thresholded, min_region, minx, miny)
@@ -193,6 +192,10 @@ class PreciseLineSegmenter(LineSegmenter):
             contour = self.__trace_contour(filtered_shape) - 5
             bbox = self.__generate_bbox(label, contour)
             segmentations.append(bbox)
-        end = time.time()
-        print(f"End of segmentation. Inference time: {int(end-start)} seconds")
-        return segmentations
+            polygons.append(contour)
+            max_x = max(contour[:,1])
+            min_x = min(contour[:,1])
+            max_y = max(contour[:,0])
+            min_y = min(contour[:,0])
+            region_coords.append([min_x, max_x, min_y, max_y])
+        return segmentations, polygons, clusters, region_coords, scale

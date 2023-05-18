@@ -1,11 +1,11 @@
 import json
-from BaselineBuilder import BaselineBuilder
+from line_segmentation.BaselineBuilder import BaselineBuilder
 from abc import ABC, abstractmethod
 
 from skimage.color import rgb2gray
 
 class LineSegmenter(ABC):
-    def __init__(self, path="./config/default.json"):
+    def __init__(self, path):
         with open(path) as f:
             self.config = json.load(f)
         self.bbuilder = BaselineBuilder(self.config)

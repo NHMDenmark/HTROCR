@@ -1,0 +1,4 @@
+{
+    "model": "nhmd_ocr/nhmd_out/base_full/checkpoint-160000",
+    "processor": "microsoft/trocr-base-handwritten"
+}

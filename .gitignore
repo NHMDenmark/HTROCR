@@ -10,3 +10,6 @@ TextRecognitionDataGenerator
 out
 out1
 wandb
+saved_models
+nhmd_out
+EMNIST
