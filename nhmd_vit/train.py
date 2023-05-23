@@ -1,27 +1,26 @@
 import torch
-import utils.device as device
 import os
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from VitCTC import ViTCTC
-import utils.device as devutils
+from nhmd_vit.VitCTC import ViTCTC
+import nhmd_vit.utils.device as devutils
 from itertools import groupby
-from data_processors.nhmd_datamodule import NHMDDataModule
-from nhmdtokenizer import NHMDTokenizer
+from nhmd_vit.data_processors.nhmd_datamodule import NHMDDataModule
+from nhmd_vit.nhmdtokenizer import NHMDTokenizer
 from transformers import RobertaTokenizer
 
 
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
-DATASET_PATH = "../data/NHMD_train_final"
-CHECKPOINT_PATH = "./saved_models/"
+DATASET_PATH = "./data/NHMD_train_final"
+CHECKPOINT_PATH = "./nhmd_vit/saved_models/"
 device = devutils.default_device()
 cp_file = 'run_name=0_epoch=2-val_cer=0.81.ckpt'
-# model = 'nhmddeit_small_patch16_384'
+model = 'nhmddeit_small_patch16_384'
 # model = 'nhmdbeit_base_patch16_384'
-model = 'nhmdbeit_large_patch16_384'
-run_name = 'TROCR_beit_large_271k'
-max_len = 100
+# model = 'nhmdbeit_large_patch16_384'
+run_name = 'TROCR_deit_small_271k_trocrinit'
+max_len = 50
 
 def train_hybrid(**kwargs):
     pl.seed_everything(0)
@@ -32,10 +31,10 @@ def train_hybrid(**kwargs):
         data_path=DATASET_PATH,
         tokenizer=tokenizer, 
         max_len=max_len,
-        train_bs=16,
-        val_bs=16,
+        train_bs=64,
+        val_bs=64,
         test_bs=32,
-        num_workers=32)
+        num_workers=16)
     data_module.setup()
     train_dl = data_module.train_dataloader()
     valid_dl = data_module.val_dataloader()
@@ -50,8 +49,8 @@ def train_hybrid(**kwargs):
                                                     mode="min",
                                                     monitor="val_loss")],
                          accelerator="gpu" if str(device).startswith("cuda") else "cpu",
-                         devices=2,
-                         strategy='ddp',
+                         devices=1,
+                        #  strategy='ddp',
                          precision='16-mixed',
                          max_epochs=30,
                          log_every_n_steps=10,

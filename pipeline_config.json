@@ -1,4 +1,4 @@
 {
-    "segmenter": "precise",
+    "segmenter": "height_based",
     "transcriber": "visioned"
 }

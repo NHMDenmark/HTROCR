@@ -166,7 +166,7 @@ class PreciseLineSegmenter(LineSegmenter):
         return masked_image
 
     def segment_lines(self, img_path):
-        scale = 0.25
+        scale = 0.33
         orig = Image.open(img_path)
         width, height = orig.size
         new_size = (int(width * scale), int(height * scale))

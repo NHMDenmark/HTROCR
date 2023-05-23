@@ -97,7 +97,7 @@ class CNNTransformerHybrid(pl.LightningModule):
             prediction_idxs = devutils.to_device(prediction_idxs, devutils.default_device())
             try:
                 # try to stop at eos_token_id for a specific line in batch
-                idx = prediction_idxs.index(2)
+                idx = prediction_idxs.index(1)
             except:
                 decoded_text = prediction_idxs
             else:

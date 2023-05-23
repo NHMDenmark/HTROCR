@@ -57,3 +57,5 @@ def generate_xml(filename, img_shape, polygon_coords, baseline_coords, transcrip
 
 strinas ="./line_segmentation/demo/orig.jpg"
 print(strinas.split('/')[-1])
+import numpy as np
+print(np.zeros((100, 256)).T.shape)

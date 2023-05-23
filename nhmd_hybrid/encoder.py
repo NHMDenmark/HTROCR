@@ -50,7 +50,8 @@ def scaled_dot_product(q, k, v, mask=None):
     # Optional masking for sequences with different lengths
     if mask is not None:
         mask = mask.unsqueeze(1).unsqueeze(1)
-        attn_logits = attn_logits.masked_fill(mask == 0, -9e15)
+        _MASKING_VALUE = -9e15 if attn_logits.dtype == torch.float32 else -1e+4
+        attn_logits = attn_logits.masked_fill(mask == 0, _MASKING_VALUE)
     attention = F.softmax(attn_logits, dim=-1)
     values = torch.matmul(attention, v)
     return values, attention

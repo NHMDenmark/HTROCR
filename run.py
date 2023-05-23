@@ -45,6 +45,31 @@ class NHMDPipeline(object):
         tcontainer.config.from_json(config_path)
         self.transcriber = tcontainer.selector()
 
+    def evaluate_baseline(self, path):
+        _, _, clusters, _, _ = self.segmenter.segment_lines(path)
+        baselines = ''
+        for i in range(1, len(clusters)):
+            Si = clusters[i]
+            for p in Si.keys():
+                pointx = p[1]
+                pointy = p[0]
+                baselines += f'{pointx},{pointy};'
+            baselines += '\n'
+        return baselines
+
+    def evaluate_baselines(self, path):
+        print('Started evaluation.')
+        start = time.time()
+        out_dir = './preds'
+        os.makedirs(out_dir, exist_ok=True)
+        for file in os.listdir(path):
+            if file.endwith('.jpg') or file.endwith('.png'):
+                baselines = self.evaluate_baseline(os.path.join(path, file), )
+                with open(os.path.join(out_dir, file[:-4] + '.txt'), 'w') as f:
+                    f.write(baselines)
+        end = time.time()
+        print(f"End of processing. Runtime: {int(end-start)} seconds")
+
     def process_image(self, path, id=None):
         if id is None:
             print('Starting processing...')

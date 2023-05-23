@@ -19,9 +19,9 @@ DATASET_PATH = "../unilm/trocr/NHMD_GT"
 CHECKPOINT_PATH = "./nhmd_hybrid/saved_models/"
 device = devutils.default_device()
 # cp_file = "NHMD_hybrid_large_271k.ckpt"
-cp_file = "nhmd_hybrid_final.ckpt"
+cp_file = "NHMD_hybrid_base_271k_final.ckpt"
 # run_name = 'NHMD_hybrid_large_271k'
-run_name = 'NHMD_hybrid_271k'
+run_name = 'NHMD_hybrid_base_271k'
 
 def test_hybrid():
     # tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
@@ -38,7 +38,7 @@ def test_hybrid():
     data_module.setup(mode='test')
     test_dl = data_module.test_dataloader()
 
-    pretrained_filename = os.path.join(CHECKPOINT_PATH, cp_file)
+    pretrained_filename = os.path.join(CHECKPOINT_PATH, run_name, cp_file)
     if os.path.isfile(pretrained_filename):
         print("Found pretrained model, loading...")
         model = CNNTransformerHybrid.load_from_checkpoint(pretrained_filename)
@@ -60,10 +60,10 @@ def test_hybrid():
         # Loop through the batch images
         for i in range(x_test.shape[0]):
             raw_prediction = list(max_index[:, i].detach().cpu().numpy())
-            prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 1])
+            prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 0])
             try:
                 # try to stop at eos_token_id for a specific line in batch
-                idx = prediction_idxs.index(2)
+                idx = prediction_idxs.index(1)
             except:
                 decoded_text = prediction_idxs
             else:
@@ -81,7 +81,7 @@ def test_hybrid():
     mean_wer = np.array(wer_scores).mean()
     results.append('mean cer: ' + str(mean_cer) + '\n')
     results.append('mean wer: ' + str(mean_wer))
-    with open(os.path.join(CHECKPOINT_PATH,f'results_{run_name}.txt'), 'w') as f:
+    with open(os.path.join(CHECKPOINT_PATH, run_name, f'results_{run_name}.txt'), 'w') as f:
         f.write(''.join(results))
 
 if __name__ == '__main__':

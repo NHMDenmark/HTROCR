@@ -18,13 +18,17 @@ from torchmetrics import CharErrorRate, WordErrorRate
 import numpy as np
 
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
-DATASET_PATH = "../../unilm/trocr/NHMD_GT"
-CHECKPOINT_PATH = "./saved_models/"
+DATASET_PATH = "../unilm/trocr/NHMD_GT"
+CHECKPOINT_PATH = "./nhmd_vit/saved_models/"
 device = devutils.default_device()
 # run_name = 'TROCR_beit_base_271k'
 # cp_file = 'TROCR_beit_base_271k_final.ckpt'
-run_name = 'NHMD_deit_small_271k'
-cp_file = 'deit_small.ckpt'
+# run_name = 'NHMD_deit_small_271k'
+# cp_file = 'deit_small.ckpt'
+# run_name = 'TROCR_beit_large_271k'
+# cp_file = 'TROCR_beit_large_271k_final.ckpt'
+run_name = 'TROCR_deit_small_271k_trocrinit'
+cp_file = 'TROCR_deit_small_271k_trocrinit_final.ckpt'
 
 def test_hybrid():
     # tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
@@ -61,10 +65,10 @@ def test_hybrid():
         # Loop through the batch images
         for i in range(x_test.shape[0]):
             raw_prediction = list(max_index[:, i].detach().cpu().numpy())
-            prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 1])
+            prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 0])
             try:
                 # try to stop at eos_token_id for a specific line in batch
-                idx = prediction_idxs.index(2)
+                idx = prediction_idxs.index(1)
             except:
                 decoded_text = prediction_idxs
             else:

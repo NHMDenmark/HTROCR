@@ -13,13 +13,15 @@ from transformers import RobertaTokenizer
 
 
 # os.environ["CUDA_VISIBLE_DEVICES"]="0"
-DATASET_PATH = "../data/NHMD_train_final"
-CHECKPOINT_PATH = "./saved_models/"
+DATASET_PATH = "data/NHMD_train_final"
+CHECKPOINT_PATH = "./nhmd_hybrid/saved_models/"
+run_name = 'NHMD_hybrid_base_271k'
+cp_file = 'NHMD_hybrid_base_271k_final.ckpt'
 device = devutils.default_device()
 
 def train_hybrid(**kwargs):
     pl.seed_everything(0)
-    root_dir = os.path.join(CHECKPOINT_PATH, 'NHMD_hybrid_FIB_271k')
+    root_dir = os.path.join(CHECKPOINT_PATH, run_name)
     # tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     tokenizer = NHMDTokenizer()
     data_module = NHMDDataModule(
@@ -27,7 +29,7 @@ def train_hybrid(**kwargs):
         tokenizer=tokenizer, 
         height=32, 
         max_len=300,
-        train_bs=32,
+        train_bs=64,
         val_bs=64,
         test_bs=32,
         num_workers=32,
@@ -38,16 +40,18 @@ def train_hybrid(**kwargs):
     valid_dl = data_module.val_dataloader()
     os.makedirs(root_dir, exist_ok=True)
 
-    wandb_logger = WandbLogger(project='NHMD', name='NHMD_hybrid_FIB_271k')
+    wandb_logger = WandbLogger(project='NHMD', name=run_name)
     trainer = pl.Trainer(default_root_dir=root_dir,
-                         callbacks=[EarlyStopping(monitor="val_cer", mode="min"),
+                         callbacks=[EarlyStopping(monitor="val_loss", mode="min"),
                                     ModelCheckpoint(dirpath=root_dir,
                                                     filename='nhmd_hybrid_{epoch}-{val_cer:.2f}',
-                                                    save_weights_only=True,
+                                                    save_weights_only=False,
                                                     mode="min",
-                                                    monitor="val_cer")],
+                                                    monitor="val_loss")],
                          accelerator="gpu" if str(device).startswith("cuda") else "cpu",
                          devices=2,
+                         strategy='ddp',
+                         precision='16-mixed',
                          max_epochs=30,
                          log_every_n_steps=10,
                          gradient_clip_val=5,
@@ -57,7 +61,7 @@ def train_hybrid(**kwargs):
     trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
 
     # Check whether pretrained model exists. If yes, load it and skip training
-    pretrained_filename = os.path.join(root_dir, "NHMD_hybrid_FIB_271k.ckpt")
+    pretrained_filename = os.path.join(root_dir, cp_file)
     if os.path.isfile(pretrained_filename):
         print("Found pretrained model, loading...")
         model = CNNTransformerHybrid.load_from_checkpoint(pretrained_filename)
@@ -78,10 +82,10 @@ def train_hybrid(**kwargs):
     # Loop through the single batch
     for i in range(x_test.shape[0]):
         raw_prediction = list(max_index[:, i].detach().cpu().numpy())
-        prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 1])
+        prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != 0])
         try:
             # try to stop at eos_token_id for a specific line in batch
-            idx = prediction_idxs.index(2)
+            idx = prediction_idxs.index(1)
         except:
             decoded_text = prediction_idxs
         else:
@@ -94,7 +98,7 @@ def train_hybrid(**kwargs):
         break
     
     model = model.to(device)
-    trainer.save_checkpoint(os.path.join(root_dir, 'NHMD_hybrid_FIB_271k.ckpt'))
+    trainer.save_checkpoint(os.path.join(root_dir, cp_file))
 
     return model, result
 
