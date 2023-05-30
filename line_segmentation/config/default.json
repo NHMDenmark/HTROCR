@@ -1,5 +1,5 @@
 {
     "segmenter": "precise",
     "model_weight_path": "line_segmentation/predictor/net/default.pb",
-    "superpixel_confidence_thresh": 0.2
+    "superpixel_confidence_thresh": 0.1
 }

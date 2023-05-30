@@ -1,9 +1,9 @@
 import os
 import pandas as pd
 
-folder_loc = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/image"
-gt_xlsx = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/info.xlsx"
-output_path = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/gt_test.txt"
+folder_loc = "./data/NHMD_LINES_100/image"
+gt_xlsx = "./data/NHMD_LINES_100/info.xlsx"
+output_path = "./data/NHMD_LINES_100/gt_test.txt"
 
 def write_filenames():
     files = os.listdir(folder_loc)

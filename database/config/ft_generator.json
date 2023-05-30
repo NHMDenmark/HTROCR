@@ -4,7 +4,7 @@
         "emunch": null,
         "mmd": null,
         "retro": null,
-        "transkribus": "/home/kfx882/studies/NHMD-digitisation/data/danish/aarhus/Brabrand-Aarslev_1841-1849_side_1-142"
+        "transkribus": "./data/danish/aarhus/Brabrand-Aarslev_1841-1849_side_1-142"
     },
 
     "db_collection": {
@@ -19,5 +19,5 @@
         "/home/kfx882/studies/train_db/handwriting_line_generation/out/taxon_hw":-1
     },
 
-    "db_path": "/home/kfx882/studies/NHMD-digitisation/data/NHMD_train_ft"
+    "db_path": "./data/NHMD_train_ft"
 }

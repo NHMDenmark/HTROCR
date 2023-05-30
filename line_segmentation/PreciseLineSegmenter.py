@@ -20,6 +20,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return np.array([polygon_set[i] for i in hull.vertices])
 
     def __get_line_height(self, Si, N, bbox, min_interpdist, minx, miny):
+        """
+        Approximately estimates handwritten line height.
+        """
         heights = []
         for p, v in Si.items():
             y,x = p
@@ -31,11 +34,14 @@ class PreciseLineSegmenter(LineSegmenter):
                 if tuple(nv) in list(Si.keys()):
                     column.append([nv[1]-minx, nv[0]-miny])
             theta = v[0] + np.pi/2
-            end_point = (int(x + np.cos(theta) * int(min_interpdist-1)), int(y - np.sin(theta) * int(min_interpdist-1)))
+            end_point = (int(x + np.cos(theta) * int(min_interpdist-1))+1, int(y - np.sin(theta) * int(min_interpdist-1))+1)
             dx, dy = np.cos(theta), -np.sin(theta)
             height = 0
             stop_criteria = 0
-            while int(column[0][0]) != end_point[0] and int(column[0][1]) != end_point[1]:
+            # Go upwards from the baseline until the border of bounding box is reached
+            while int(column[0][0]) != end_point[0] and int(column[0][1]) != end_point[1]\
+and int(column[0][0]) < bbox.shape[1] and int(column[0][1]) < bbox.shape[0]\
+and int(column[0][0]) > 0 and int(column[0][1]) > 0:
                 exists = any([bbox[int(p[1]), int(p[0])] for p in column])
                 if exists:
                     height += 1
@@ -45,8 +51,6 @@ class PreciseLineSegmenter(LineSegmenter):
                 if stop_criteria >= 30:
                     break
                 column = [[p[0]+dx, p[1]+dy] for p in column]
-                # x += dx
-                # y += dy
             if height != 0:
                 heights.append(height)
         if len(heights) > 0:
@@ -55,9 +59,12 @@ class PreciseLineSegmenter(LineSegmenter):
             return 0
 
     def __add_core_region(self, img, baseline, minx, miny, height):
+        """
+        Adds core region bounding box on top of text line features to ensure
+        that all elements across the line width are included in segmentation
+        """
         polygon_set = []
         for p, (angle_rad, _) in baseline.items():
-            # Min pixels to separate line segments
             p0 = p[0]
             p1 = p[1]
             p0 -= miny
@@ -76,6 +83,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return np.array(pilImage)
 
     def __separate_lines(self, baseline, minx, miny, bbox, height):
+        """
+        Main segmentation steps 
+        """
         dilated = self.__add_core_region(bbox, baseline, minx, miny, height)
         dilated = grey_dilation(dilated, footprint=np.ones((3, 3)))
         dist_transform = ndimage.distance_transform_edt(dilated)
@@ -83,6 +93,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return dilated, watershed(-dist_transform, markers, mask=dilated)
 
     def __get_line_bbox(self, Si):
+        """
+        Generates oversized bounding box for precise noise elimination
+        """
         polygon_set = []
         sum_of_dists = 0
         min_dist = np.inf
@@ -96,14 +109,16 @@ class PreciseLineSegmenter(LineSegmenter):
             end_point = (int(p[0] - np.sin(angle_rad) * int(mean_dist)), int(p[1] + np.cos(angle_rad) * int(mean_dist)))
             polygon_set.append(end_point)
         sorted_points = self.__convex_hull_polygon(polygon_set)
-        minx = min(sorted_points[:,1])-10
+        minx = min(sorted_points[:,1])-10 if min(sorted_points[:,1])-10 > 0 else 0
         maxx = max(sorted_points[:,1])+20
-        miny = min(sorted_points[:,0])-20
+        miny = min(sorted_points[:,0])-20 if min(sorted_points[:,0])-20 > 0 else 0
         maxy = max(sorted_points[:,0])+20
         return minx, miny, maxx, maxy, int(min_dist)
 
     def __merge_line_segments(self, img, baseline, watershed_segments):
-        # Merge computed segments that are closest to baseline
+        """ 
+        Merges computed segments that are closest to baseline
+        """
         segments_to_merge = []
         for p in baseline:
             min_dist = np.inf
@@ -129,7 +144,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return binary_image, sorted_points
 
     def __remove_outliers(self, segmented_img, dilated, sorted_points):
-        # Remove non line segments
+        """
+        Removes non line segments (noise)
+        """
         other_classes = dilated.copy()
         other_classes[segmented_img] = False
 
@@ -144,7 +161,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return filled_image
 
     def __trace_contour(self, filtered_shape):
-        # Find the contour on updated shape
+        """
+        Finds the contour on updated shape
+        """
         filtered_shape = np.pad(filtered_shape, (5,), mode='constant')
         contours = find_contours(filtered_shape)
 
@@ -156,6 +175,9 @@ class PreciseLineSegmenter(LineSegmenter):
         return bounding_contour
 
     def __generate_bbox(self, bbox_img, points):
+        """
+        Constructs a final bounding box
+        """
         mask = Image.new("1", Image.fromarray(bbox_img).size, 0)
         ImageDraw.Draw(mask).polygon(list(zip(points[:,1], points[:,0])), fill=1)
         average_color = np.mean(bbox_img, axis=(0, 1))
@@ -166,6 +188,10 @@ class PreciseLineSegmenter(LineSegmenter):
         return masked_image
 
     def segment_lines(self, img_path):
+        """
+        Main driver. Returns segmentation images, contour coordinates (for xmls),
+        wrapping bounding box coordinates (region_coords), the image scale value.
+        """
         scale = 0.33
         orig = Image.open(img_path)
         width, height = orig.size

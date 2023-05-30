@@ -49,8 +49,8 @@ def train_hybrid(**kwargs):
                                                     mode="min",
                                                     monitor="val_loss")],
                          accelerator="gpu" if str(device).startswith("cuda") else "cpu",
-                         devices=2,
-                         strategy='ddp',
+                         devices=1,
+                        #  strategy='ddp',
                          precision='16-mixed',
                          max_epochs=30,
                          log_every_n_steps=10,
@@ -86,10 +86,9 @@ def train_hybrid(**kwargs):
         try:
             # try to stop at eos_token_id for a specific line in batch
             idx = prediction_idxs.index(1)
-        except:
-            decoded_text = prediction_idxs
-        else:
             decoded_text = prediction_idxs[: idx + 1]
+        except ValueError:
+            decoded_text = prediction_idxs
         # Label text
         pred_str = tokenizer.decode(decoded_text, skip_special_tokens=True)
         label_str = tokenizer.decode(y_test[i], skip_special_tokens=True)

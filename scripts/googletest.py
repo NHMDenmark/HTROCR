@@ -21,8 +21,8 @@ def detect_document(path):
     return transcription_result
 
 if __name__ == '__main__':
-    folder_loc = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_ORIG_100_cropped"
-    output_folder = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/VISION_API/NHMD_ORIG_100_cropped_outputs"
+    folder_loc = "./data/NHMD_ORIG_100_cropped"
+    output_folder = "./data/VISION_API/NHMD_ORIG_100_cropped_outputs"
     for filename in os.listdir(folder_loc):
         path = os.path.join(folder_loc, filename)
         if os.path.isfile(path) and filename.startswith('sp'):

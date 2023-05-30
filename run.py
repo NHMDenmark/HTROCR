@@ -10,6 +10,8 @@ import os
 from PIL import Image
 import numpy as np
 import time
+from tqdm import tqdm
+
 
 class LineSegmenterContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
@@ -27,6 +29,7 @@ class TranscriberContainer(containers.DeclarativeContainer):
         hybrid=providers.Factory(HybridTranscriber),
         vit=providers.Factory(VitTranscriber),
     )
+
 class NHMDPipeline(object):
     def __init__(self, config_path='./pipeline_config.json', save_images=False, out_dir='./out', out_type='txt'):
         os.makedirs(out_dir, exist_ok=True)
@@ -45,36 +48,59 @@ class NHMDPipeline(object):
         tcontainer.config.from_json(config_path)
         self.transcriber = tcontainer.selector()
 
-    def evaluate_baseline(self, path):
+    def evaluate_baseline(self, path, out_dir='./out'):
+        """
+        Only segmentation run for a single image.
+        Image will get processed by a baseline processor and the coordinates
+        will be stored in .txt file for an evaluation tool:
+        https://github.com/Transkribus/TranskribusBaseLineEvaluationScheme
+        """
         _, _, clusters, _, _ = self.segmenter.segment_lines(path)
         baselines = ''
+        out_dir = './best_NHMD_cbad_preds'
+        if len(clusters) == 0:
+            with open(os.path.join(out_dir, os.path.basename(path)[:-4] + '.txt'), 'w') as f:
+                pass
+
         for i in range(1, len(clusters)):
             Si = clusters[i]
             for p in Si.keys():
-                pointx = p[1]
-                pointy = p[0]
+                pointx = int(p[1] * (1/0.33))
+                pointy = int(p[0] * (1/0.33))
                 baselines += f'{pointx},{pointy};'
+            baselines = baselines[:-1]
             baselines += '\n'
-        return baselines
+        with open(os.path.join(out_dir, os.path.basename(path)[:-4] + '.txt'), 'w') as f:
+            f.write(baselines)
 
-    def evaluate_baselines(self, path):
+    def evaluate_baselines(self, path, out_dir='./out'):
+        """
+        Only segmentation run for a folder of images.
+        Images will get processed by a baseline processor and the coordinates
+        will be stored in .txt files for an evaluation tool:
+        https://github.com/Transkribus/TranskribusBaseLineEvaluationScheme
+        """
         print('Started evaluation.')
         start = time.time()
-        out_dir = './preds'
         os.makedirs(out_dir, exist_ok=True)
-        for file in os.listdir(path):
-            if file.endwith('.jpg') or file.endwith('.png'):
-                baselines = self.evaluate_baseline(os.path.join(path, file), )
-                with open(os.path.join(out_dir, file[:-4] + '.txt'), 'w') as f:
-                    f.write(baselines)
+        file_list = os.listdir(path)
+        progress_bar = tqdm(total=len(file_list))
+        for file in file_list:
+            if (file.endswith('.jpg') or file.endswith('.png')):
+                file_path = os.path.join(path, file)
+                self.evaluate_baseline(file_path, out_dir)
+            progress_bar.update(1)
         end = time.time()
         print(f"End of processing. Runtime: {int(end-start)} seconds")
 
     def process_image(self, path, id=None):
+        """
+        End-to-end transcription processor for a single image.
+        Image will get segmented and transcribed.
+        """
         if id is None:
             print('Starting processing...')
             start = time.time()
-
         lines, polygons, baselines, region_coords, scale = self.segmenter.segment_lines(path)
         predictions = []
         for idx, line in enumerate(lines):
@@ -99,14 +125,17 @@ class NHMDPipeline(object):
             print(f"End of processing. Inference time: {int(end-start)} seconds")
 
     def process_dir(self, path):
+        """
+        End-to-end transcription processor for a folder of images.
+        Images will get segmented and transcribed.
+        """
         print('Starting processing...')
         start = time.time()
         for file in os.listdir(path):
-            if file.endwith('.jpg') or file.endwith('.png'):
+            if file.endswith('.jpg') or file.endswith('.png'):
                 self.process_image(os.path.join(path, file), file[:-4])
         end = time.time()
         print(f"End of processing. Inference time: {int(end-start)} seconds")
 
 if __name__ == '__main__':
-    # "./line_segmentation/demo/orig.jpg"
     fire.Fire(NHMDPipeline)

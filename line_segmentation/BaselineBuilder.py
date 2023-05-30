@@ -5,6 +5,8 @@ from skimage.morphology import skeletonize
 from line_segmentation.predictor.inference import Predictor
 from line_segmentation.util import get_point_neighbors
 from PIL import Image
+from multiprocessing import Pool
+from functools import partial
 
 class BaselineBuilder():
     def __init__(self, config):
@@ -101,8 +103,10 @@ class BaselineBuilder():
         # Sort by baseline connectivities.
         L = L[(-L[:,1]).argsort()]
         # do not consider non-neighbor edges
-        max_val = max(L[:,1])
-        L = np.array([l for l in L if l[1]/max_val > 0.4])
+        # max_val = max(L[:,1])
+        max_val = L[0,1]
+        # L = np.array([l for l in L if l[1]/max_val > 0.4])
+        L = L[L[:, 1]/max_val > 0.4]
         if len(L) == 1:
             e = L[0,0]
         else:
@@ -198,10 +202,10 @@ class BaselineBuilder():
             p_state = {p: v}
             for nv in NVs:
                 q = tuple(nv.astype(int))
-                isSameOriented = (abs(states[p][0] - states[q][0]) % np.pi) <= np.pi/4
+                isSameOriented = (abs(states[p][0] - states[q][0]) % np.pi) <= np.pi/6
                 interpdist = self.__L2_norm(p, q)
                 # if not following the skeleton - skip
-                if isSameOriented and interpdist < 20:
+                if isSameOriented and interpdist < 25:
                     nv_connectivity.append(q)
             if len(nv_connectivity) == 0:
                 continue
@@ -238,13 +242,16 @@ class BaselineBuilder():
                     P_star[p_idx] = union_set
                     P_star = self.__remove_cfpl(Sj, P_star)
                 # Otherwise - ignore since both points are in the same cluster
+        P_star = [set_i for set_i in P_star if len(set_i) >= 5]
         return P_star
 
     def run(self, img):
         B = self.predictor.run(img)
-        Bb = (B > 0.2) * 1
+        Bb = (B > 0.1) * 1
         Bs = skeletonize(Bb)
         S, SI = self.__select_superpixels(B, Bs)
+        if len(S) == 0 or len(S) < 3:
+            return [], None
         N = Delaunay(S)
         angles = [self.__extract_lto(p, N, B) for p in S]
         states = {tuple(p): (angles[i], self.__select_closest_interpdist_within_circle(p, angles[i], S)) for i, p in enumerate(S)}

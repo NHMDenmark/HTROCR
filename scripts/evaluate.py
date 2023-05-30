@@ -4,7 +4,7 @@ import os
 import math
 import numpy as np
 
-RESULTS_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/single_line_results'
+RESULTS_DIR = './data/single_line_results'
 GT_DIR = 'NHMD_GT'
 
 def get_scores(data_dir):

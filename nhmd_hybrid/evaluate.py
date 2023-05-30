@@ -64,10 +64,9 @@ def test_hybrid():
             try:
                 # try to stop at eos_token_id for a specific line in batch
                 idx = prediction_idxs.index(1)
-            except:
-                decoded_text = prediction_idxs
-            else:
                 decoded_text = prediction_idxs[: idx + 1]
+            except ValueError:
+                decoded_text = prediction_idxs
             # Label text
             pred_str = tokenizer.decode(decoded_text, skip_special_tokens=True)
             label_str = tokenizer.decode(y_test[i], skip_special_tokens=True)

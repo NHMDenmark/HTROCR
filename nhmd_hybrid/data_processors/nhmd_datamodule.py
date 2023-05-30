@@ -40,25 +40,20 @@ class NHMDDataModule(pl.LightningDataModule):
         return expanded
 
     def collate_fn(self, batch):
-        # print('batch',len(batch))
         images = [b[0] for b in batch]
         labels = [b[1] for b in batch]
 
-        # print('image shape', images[0].shape)
         image_widths = [im.shape[1] for im in images]
         max_width = max(image_widths)
 
         attn_images = []
         for w in image_widths:
             attn_images.append([1] * w + [0] * (max_width - w))
-        # print('attn1', len(attn_images[0]))
         attn_images = (
             self.pooler(torch.tensor(attn_images).float()).long()
             if self.do_pool
             else None
         )
-
-        # print('attn2',attn_images[0].shape)
 
         h = images[0].shape[0]
         to_tensor = ToTensor()
@@ -70,9 +65,6 @@ class NHMDDataModule(pl.LightningDataModule):
                                                 truncation=True)
         input_ids = tokens.get("input_ids")
         attention_masks = tokens.get("attention_mask")
-        # important: make sure that PAD tokens are ignored by the loss function
-        # Since CTC loss is being used, this is not important.
-        # label[label == self.tokenizer.pad_token_id] = -100
         return torch.stack(images), input_ids, attn_images, attention_masks
 
     def train_dataloader(self):

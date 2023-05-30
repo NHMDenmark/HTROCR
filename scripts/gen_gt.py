@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 
-gt_xlsx = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_LINES_100/info.xlsx"
-output_folder = "/Users/linas/Studies/UCPH-DIKU/thesis/code/data/NHMD_GT"
+gt_xlsx = "./data/NHMD_LINES_100/info.xlsx"
+output_folder = "./data/NHMD_GT"
 
 
 def write_gt():

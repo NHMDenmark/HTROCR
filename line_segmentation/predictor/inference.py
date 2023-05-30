@@ -19,7 +19,10 @@ class Predictor(object):
 
     def run(self, img, gpu_device="0"):
         session_conf = tf.compat.v1.ConfigProto()
+        # gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.65, visible_device_list=gpu_device)
         session_conf.gpu_options.visible_device_list = gpu_device
+        session_conf.gpu_options.allow_growth=True
+        # session_conf.gpu_options.per_process_gpu_memory_fraction = 0.75
         with tf.compat.v1.Session(graph=self.graph, config=session_conf) as sess:
             if len(img.shape) == 2:
                 img = np.expand_dims(img,2)

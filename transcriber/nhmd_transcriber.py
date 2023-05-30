@@ -19,12 +19,11 @@ class Transcriber(ABC):
         raw_prediction = list(max_index[:, 0].detach().cpu().numpy())
         prediction_idxs = torch.IntTensor([c for c, _ in groupby(raw_prediction) if c != self.tokenizer.pad_token_id])
         try:
-            # try to stop at eos_token_id for a specific line
-            idx = prediction_idxs.index(self.tokenizer.eos_token_id)
-        except:
-            decoded_text = prediction_idxs
-        else:
+            # try to stop at eos_token_id for a specific line in batch
+            idx = prediction_idxs.index(1)
             decoded_text = prediction_idxs[: idx + 1]
+        except ValueError:
+            decoded_text = prediction_idxs
         pred_str = self.tokenizer.decode(decoded_text, skip_special_tokens=True)
         return str(pred_str)
 

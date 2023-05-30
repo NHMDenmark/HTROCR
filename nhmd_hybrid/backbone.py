@@ -1,6 +1,10 @@
 import torch
 from torch import nn
 
+"""
+Backbone follows: https://dl.acm.org/doi/pdf/10.1145/3558100.3563845
+"""
+
 class Swish(nn.Module):
     def forward(self, x):
         return x * torch.sigmoid(x)

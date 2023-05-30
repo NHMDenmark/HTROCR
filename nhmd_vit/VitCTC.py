@@ -1,17 +1,13 @@
 import torch
 import pytorch_lightning as pl
-# from utils.scheduler import CosineWarmupScheduler
 from nhmd_vit.utils.scheduler import CosineWarmupScheduler
 from torch import optim
 import torch
 from torch.nn import CTCLoss
 from torchmetrics import CharErrorRate
 from itertools import groupby
-# import utils.device as devutils
 import nhmd_vit.utils.device as devutils
-# from NHMDVit import create_vit
 from nhmd_vit.NHMDVit import create_vit
-# from nhmdtokenizer import NHMDTokenizer
 from nhmd_vit.nhmdtokenizer import NHMDTokenizer
 
 class ViTCTC(pl.LightningModule):

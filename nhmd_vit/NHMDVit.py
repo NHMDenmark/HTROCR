@@ -1,10 +1,11 @@
 import torch 
 import torch.nn as nn
 import logging
-from functools import partial
-from timm.models.vision_transformer import VisionTransformer, _cfg
 from timm.models.registry import register_model
 from timm.models import create_model
+from functools import partial
+from timm.models.vision_transformer import VisionTransformer, _cfg
+
 
 _logger = logging.getLogger(__name__)
 
@@ -14,11 +15,11 @@ __all__ = [
     'nhmdbeit_large_patch16_384',
 ]
 
-class ViTSTR(VisionTransformer):
-    '''
-    ViTSTR is basically a ViT that uses DeiT weights.
-    Modified head to support a sequence of characters prediction for STR.
-    '''
+"""
+Some of the parts bellow pretrained ViT model loading for HTR tasks were borrowed from:
+https://github.com/roatienza/deep-text-recognition-benchmark
+"""
+class ViTNHMD(VisionTransformer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
     
@@ -30,7 +31,7 @@ class ViTSTR(VisionTransformer):
         B = x.shape[0]
         x = self.patch_embed(x)
 
-        cls_token = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
+        cls_token = self.cls_token.expand(B, -1, -1)
         if self.dist_token is None:
             x = torch.cat((cls_token, x), dim=1)
         else:
@@ -48,10 +49,9 @@ class ViTSTR(VisionTransformer):
         x = self.forward_features(x)
         x = x[:, :seqlen]
 
-        # batch, seqlen, embsize
-        b, s, e = x.size()
-        x = x.reshape(b*s, e)
-        x = self.head(x).view(b, s, self.num_classes)
+        bsz, sl, model_dim = x.size()
+        x = x.reshape(bsz*sl, model_dim)
+        x = self.head(x).view(bsz, sl, self.num_classes)
         return x
 
 
@@ -76,8 +76,6 @@ def load_pretrained(model, cfg=None, trasform_patch_size=False, is_trocr_state_d
         for k,v in state_dict.items():
             if k.startswith('decoder'):
                 continue
-            # elif 'qkv.bias' in str(k):
-            #     continue
             elif k.startswith('encoder.deit.'):
                 newK = k.split('encoder.deit.')[1]
                 new_dict[newK] = v
@@ -105,7 +103,6 @@ def load_pretrained(model, cfg=None, trasform_patch_size=False, is_trocr_state_d
     O, I, J, K = conv1_weight.shape
     if I > 3:
         assert conv1_weight.shape[1] % 3 == 0
-        # For models with space2depth stems
         conv1_weight = conv1_weight.reshape(O, I // 3, 3, J, K)
         conv1_weight = conv1_weight.sum(dim=2, keepdim=False)
     else:
@@ -113,7 +110,6 @@ def load_pretrained(model, cfg=None, trasform_patch_size=False, is_trocr_state_d
     conv1_weight = conv1_weight.to(conv1_type)
     state_dict[conv1_name + '.weight'] = conv1_weight
 
-    # completely discard fully connected for all other differences between pretrained and created model
     classifier_name = cfg['classifier']
     del state_dict[classifier_name + '.weight']
     del state_dict[classifier_name + '.bias']
@@ -125,13 +121,12 @@ def load_pretrained(model, cfg=None, trasform_patch_size=False, is_trocr_state_d
     strict = False
 
     print("Loading pre-trained vision transformer weights from %s ..." % cfg['url'])
-    # print([k for k in state_dict.keys()])
     model.load_state_dict(state_dict, strict=strict)
 
 
 @register_model
 def nhmddeit_small_patch16_384(pretrained=False, **kwargs):
-    model = ViTSTR(distilled=True,
+    model = ViTNHMD(distilled=True,
         img_size=384, patch_size=16, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4, qkv_bias=False, in_chans=1,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     model.default_cfg = _cfg(
@@ -145,7 +140,7 @@ def nhmddeit_small_patch16_384(pretrained=False, **kwargs):
 
 @register_model
 def nhmdbeit_base_patch16_384(pretrained=False, **kwargs):
-    model = ViTSTR(
+    model = ViTNHMD(
         img_size=384, patch_size=16, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=False, in_chans=1,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     model.default_cfg = _cfg(
@@ -158,7 +153,7 @@ def nhmdbeit_base_patch16_384(pretrained=False, **kwargs):
 
 @register_model
 def nhmdbeit_large_patch16_384(pretrained=False, **kwargs):
-    model = ViTSTR(
+    model = ViTNHMD(
         img_size=384, patch_size=16, embed_dim=1024, depth=24, num_heads=16, mlp_ratio=4, qkv_bias=False, in_chans=1,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     model.default_cfg = _cfg(
@@ -177,31 +172,3 @@ def create_vit(num_tokens, model=None, checkpoint_path=''):
         checkpoint_path=checkpoint_path)
     nhmd_vit.reset_classifier(num_classes=num_tokens)
     return nhmd_vit
-
-# if __name__ == '__main__':
-#     from transformers import VisionEncoderDecoderModel
-
-#     # Instantiate the VisionEncoderDecoderModel
-#     model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-small-handwritten")
-
-#     # Get the number of parameters in the encoder
-#     encoder_parameters = model.encoder.num_parameters()
-#     print("Number of parameters in the encoder:", encoder_parameters)
-
-#     # Get the number of parameters in the decoder
-#     decoder_parameters = model.decoder.num_parameters()
-#     print("Number of parameters in the decoder:", decoder_parameters)
-    # d1 = create_vit(154, 'nhmddeit_small_patch16_384')
-    # create_vit(154, 'nhmdbeit_base_patch16_384')
-    # difference = list(set(d1) - set(d2))
-    # print(difference)
-    # state_dict = torch.hub.load_state_dict_from_url(
-    #         url='https://layoutlm.blob.core.windows.net/trocr/model_zoo/fairseq/trocr-base-handwritten.pt',
-    #         map_location="cpu", check_hash=True
-    #     )
-    # print(state_dict)
-    # d1 = ['cls_token', 'pos_embed', 'patch_embed.proj.weight', 'patch_embed.proj.bias', 'blocks.0.norm1.weight', 'blocks.0.norm1.bias', 'blocks.0.attn.qkv.weight', 'blocks.0.attn.proj.weight', 'blocks.0.attn.proj.bias', 'blocks.0.norm2.weight', 'blocks.0.norm2.bias', 'blocks.0.mlp.fc1.weight', 'blocks.0.mlp.fc1.bias', 'blocks.0.mlp.fc2.weight', 'blocks.0.mlp.fc2.bias', 'blocks.1.norm1.weight', 'blocks.1.norm1.bias', 'blocks.1.attn.qkv.weight', 'blocks.1.attn.proj.weight', 'blocks.1.attn.proj.bias', 'blocks.1.norm2.weight', 'blocks.1.norm2.bias', 'blocks.1.mlp.fc1.weight', 'blocks.1.mlp.fc1.bias', 'blocks.1.mlp.fc2.weight', 'blocks.1.mlp.fc2.bias', 'blocks.2.norm1.weight', 'blocks.2.norm1.bias', 'blocks.2.attn.qkv.weight', 'blocks.2.attn.proj.weight', 'blocks.2.attn.proj.bias', 'blocks.2.norm2.weight', 'blocks.2.norm2.bias', 'blocks.2.mlp.fc1.weight', 'blocks.2.mlp.fc1.bias', 'blocks.2.mlp.fc2.weight', 'blocks.2.mlp.fc2.bias', 'blocks.3.norm1.weight', 'blocks.3.norm1.bias', 'blocks.3.attn.qkv.weight', 'blocks.3.attn.proj.weight', 'blocks.3.attn.proj.bias', 'blocks.3.norm2.weight', 'blocks.3.norm2.bias', 'blocks.3.mlp.fc1.weight', 'blocks.3.mlp.fc1.bias', 'blocks.3.mlp.fc2.weight', 'blocks.3.mlp.fc2.bias', 'blocks.4.norm1.weight', 'blocks.4.norm1.bias', 'blocks.4.attn.qkv.weight', 'blocks.4.attn.proj.weight', 'blocks.4.attn.proj.bias', 'blocks.4.norm2.weight', 'blocks.4.norm2.bias', 'blocks.4.mlp.fc1.weight', 'blocks.4.mlp.fc1.bias', 'blocks.4.mlp.fc2.weight', 'blocks.4.mlp.fc2.bias', 'blocks.5.norm1.weight', 'blocks.5.norm1.bias', 'blocks.5.attn.qkv.weight', 'blocks.5.attn.proj.weight', 'blocks.5.attn.proj.bias', 'blocks.5.norm2.weight', 'blocks.5.norm2.bias', 'blocks.5.mlp.fc1.weight', 'blocks.5.mlp.fc1.bias', 'blocks.5.mlp.fc2.weight', 'blocks.5.mlp.fc2.bias', 'blocks.6.norm1.weight', 'blocks.6.norm1.bias', 'blocks.6.attn.qkv.weight', 'blocks.6.attn.proj.weight', 'blocks.6.attn.proj.bias', 'blocks.6.norm2.weight', 'blocks.6.norm2.bias', 'blocks.6.mlp.fc1.weight', 'blocks.6.mlp.fc1.bias', 'blocks.6.mlp.fc2.weight', 'blocks.6.mlp.fc2.bias', 'blocks.7.norm1.weight', 'blocks.7.norm1.bias', 'blocks.7.attn.qkv.weight', 'blocks.7.attn.proj.weight', 'blocks.7.attn.proj.bias', 'blocks.7.norm2.weight', 'blocks.7.norm2.bias', 'blocks.7.mlp.fc1.weight', 'blocks.7.mlp.fc1.bias', 'blocks.7.mlp.fc2.weight', 'blocks.7.mlp.fc2.bias', 'blocks.8.norm1.weight', 'blocks.8.norm1.bias', 'blocks.8.attn.qkv.weight', 'blocks.8.attn.proj.weight', 'blocks.8.attn.proj.bias', 'blocks.8.norm2.weight', 'blocks.8.norm2.bias', 'blocks.8.mlp.fc1.weight', 'blocks.8.mlp.fc1.bias', 'blocks.8.mlp.fc2.weight', 'blocks.8.mlp.fc2.bias', 'blocks.9.norm1.weight', 'blocks.9.norm1.bias', 'blocks.9.attn.qkv.weight', 'blocks.9.attn.proj.weight', 'blocks.9.attn.proj.bias', 'blocks.9.norm2.weight', 'blocks.9.norm2.bias', 'blocks.9.mlp.fc1.weight', 'blocks.9.mlp.fc1.bias', 'blocks.9.mlp.fc2.weight', 'blocks.9.mlp.fc2.bias', 'blocks.10.norm1.weight', 'blocks.10.norm1.bias', 'blocks.10.attn.qkv.weight', 'blocks.10.attn.proj.weight', 'blocks.10.attn.proj.bias', 'blocks.10.norm2.weight', 'blocks.10.norm2.bias', 'blocks.10.mlp.fc1.weight', 'blocks.10.mlp.fc1.bias', 'blocks.10.mlp.fc2.weight', 'blocks.10.mlp.fc2.bias', 'blocks.11.norm1.weight', 'blocks.11.norm1.bias', 'blocks.11.attn.qkv.weight', 'blocks.11.attn.proj.weight', 'blocks.11.attn.proj.bias', 'blocks.11.norm2.weight', 'blocks.11.norm2.bias', 'blocks.11.mlp.fc1.weight', 'blocks.11.mlp.fc1.bias', 'blocks.11.mlp.fc2.weight', 'blocks.11.mlp.fc2.bias', 'norm.weight', 'norm.bias']
-    # d2 = ['cls_token', 'pos_embed', 'patch_embed.proj.weight', 'patch_embed.proj.bias', 'blocks.0.norm1.weight', 'blocks.0.norm1.bias', 'blocks.0.attn.qkv.weight', 'blocks.0.attn.proj.weight', 'blocks.0.attn.proj.bias', 'blocks.0.norm2.weight', 'blocks.0.norm2.bias', 'blocks.0.mlp.fc1.weight', 'blocks.0.mlp.fc1.bias', 'blocks.0.mlp.fc2.weight', 'blocks.0.mlp.fc2.bias', 'blocks.1.norm1.weight', 'blocks.1.norm1.bias', 'blocks.1.attn.qkv.weight', 'blocks.1.attn.proj.weight', 'blocks.1.attn.proj.bias', 'blocks.1.norm2.weight', 'blocks.1.norm2.bias', 'blocks.1.mlp.fc1.weight', 'blocks.1.mlp.fc1.bias', 'blocks.1.mlp.fc2.weight', 'blocks.1.mlp.fc2.bias', 'blocks.2.norm1.weight', 'blocks.2.norm1.bias', 'blocks.2.attn.qkv.weight', 'blocks.2.attn.proj.weight', 'blocks.2.attn.proj.bias', 'blocks.2.norm2.weight', 'blocks.2.norm2.bias', 'blocks.2.mlp.fc1.weight', 'blocks.2.mlp.fc1.bias', 'blocks.2.mlp.fc2.weight', 'blocks.2.mlp.fc2.bias', 'blocks.3.norm1.weight', 'blocks.3.norm1.bias', 'blocks.3.attn.qkv.weight', 'blocks.3.attn.proj.weight', 'blocks.3.attn.proj.bias', 'blocks.3.norm2.weight', 'blocks.3.norm2.bias', 'blocks.3.mlp.fc1.weight', 'blocks.3.mlp.fc1.bias', 'blocks.3.mlp.fc2.weight', 'blocks.3.mlp.fc2.bias', 'blocks.4.norm1.weight', 'blocks.4.norm1.bias', 'blocks.4.attn.qkv.weight', 'blocks.4.attn.proj.weight', 'blocks.4.attn.proj.bias', 'blocks.4.norm2.weight', 'blocks.4.norm2.bias', 'blocks.4.mlp.fc1.weight', 'blocks.4.mlp.fc1.bias', 'blocks.4.mlp.fc2.weight', 'blocks.4.mlp.fc2.bias', 'blocks.5.norm1.weight', 'blocks.5.norm1.bias', 'blocks.5.attn.qkv.weight', 'blocks.5.attn.proj.weight', 'blocks.5.attn.proj.bias', 'blocks.5.norm2.weight', 'blocks.5.norm2.bias', 'blocks.5.mlp.fc1.weight', 'blocks.5.mlp.fc1.bias', 'blocks.5.mlp.fc2.weight', 'blocks.5.mlp.fc2.bias', 'blocks.6.norm1.weight', 'blocks.6.norm1.bias', 'blocks.6.attn.qkv.weight', 'blocks.6.attn.proj.weight', 'blocks.6.attn.proj.bias', 'blocks.6.norm2.weight', 'blocks.6.norm2.bias', 'blocks.6.mlp.fc1.weight', 'blocks.6.mlp.fc1.bias', 'blocks.6.mlp.fc2.weight', 'blocks.6.mlp.fc2.bias', 'blocks.7.norm1.weight', 'blocks.7.norm1.bias', 'blocks.7.attn.qkv.weight', 'blocks.7.attn.proj.weight', 'blocks.7.attn.proj.bias', 'blocks.7.norm2.weight', 'blocks.7.norm2.bias', 'blocks.7.mlp.fc1.weight', 'blocks.7.mlp.fc1.bias', 'blocks.7.mlp.fc2.weight', 'blocks.7.mlp.fc2.bias', 'blocks.8.norm1.weight', 'blocks.8.norm1.bias', 'blocks.8.attn.qkv.weight', 'blocks.8.attn.proj.weight', 'blocks.8.attn.proj.bias', 'blocks.8.norm2.weight', 'blocks.8.norm2.bias', 'blocks.8.mlp.fc1.weight', 'blocks.8.mlp.fc1.bias', 'blocks.8.mlp.fc2.weight', 'blocks.8.mlp.fc2.bias', 'blocks.9.norm1.weight', 'blocks.9.norm1.bias', 'blocks.9.attn.qkv.weight', 'blocks.9.attn.proj.weight', 'blocks.9.attn.proj.bias', 'blocks.9.norm2.weight', 'blocks.9.norm2.bias', 'blocks.9.mlp.fc1.weight', 'blocks.9.mlp.fc1.bias', 'blocks.9.mlp.fc2.weight', 'blocks.9.mlp.fc2.bias', 'blocks.10.norm1.weight', 'blocks.10.norm1.bias', 'blocks.10.attn.qkv.weight', 'blocks.10.attn.proj.weight', 'blocks.10.attn.proj.bias', 'blocks.10.norm2.weight', 'blocks.10.norm2.bias', 'blocks.10.mlp.fc1.weight', 'blocks.10.mlp.fc1.bias', 'blocks.10.mlp.fc2.weight', 'blocks.10.mlp.fc2.bias', 'blocks.11.norm1.weight', 'blocks.11.norm1.bias', 'blocks.11.attn.qkv.weight', 'blocks.11.attn.proj.weight', 'blocks.11.attn.proj.bias', 'blocks.11.norm2.weight', 'blocks.11.norm2.bias', 'blocks.11.mlp.fc1.weight', 'blocks.11.mlp.fc1.bias', 'blocks.11.mlp.fc2.weight', 'blocks.11.mlp.fc2.bias', 'norm.weight', 'norm.bias']
-    # difference = list(set(d1) - set(d2))
-    # print(difference)
-    # print('qkv.bias' in 'blocks.0.attn.qkv.bias')

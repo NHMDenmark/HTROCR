@@ -48,7 +48,6 @@ class CNNTransformerHybrid(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self._create_model()
-        # Roberta tokenizer pad_token_id
         self.tokenizer = tokenizer
         self.blank_label = 0
         self.criterion = CTCLoss(blank=self.blank_label, reduction='mean', zero_infinity=True)
@@ -98,10 +97,9 @@ class CNNTransformerHybrid(pl.LightningModule):
             try:
                 # try to stop at eos_token_id for a specific line in batch
                 idx = prediction_idxs.index(1)
-            except:
-                decoded_text = prediction_idxs
-            else:
                 decoded_text = prediction_idxs[: idx + 1]
+            except ValueError:
+                decoded_text = prediction_idxs
             pred_str = self.tokenizer.decode(decoded_text, skip_special_tokens=True)
             label_str = self.tokenizer.decode(labels[i], skip_special_tokens=True)
             cer_score = self.cer(pred_str, label_str)
@@ -111,10 +109,7 @@ class CNNTransformerHybrid(pl.LightningModule):
         return cer_mean
 
     def _get_lengths(self, attention_mask):
-        lens = [
-            row.argmin() if row.argmin() > 0 else len(row) for row in attention_mask
-        ]
-        return torch.tensor(lens)
+        return torch.tensor([row.tolist().index(0) if 0 in row.tolist() else len(row) for row in attention_mask])
 
     def _calculate_loss(self, batch):
         images, labels, attn_images, attn_masks  = batch # batch.shape == torch.Size([32, 1, 40, some_width])
@@ -123,16 +118,13 @@ class CNNTransformerHybrid(pl.LightningModule):
         pred = pred.permute(1, 0, 2) # we need (input_length, batch_size, no_of_classes)
         logits = pred.log_softmax(2)
         target_lengths = self._get_lengths(attn_masks)
-
         if attn_images is not None:
             input_lengths = self._get_lengths(attn_images).type_as(images)
         else:
-            input_lengths = torch.full(
-                size=(batch_size,), fill_value=logits.shape[0]
-            ).type_as(images)
+            input_lengths = torch.full(size=(batch_size,), fill_value=logits.shape[0]).type_as(images)
+
         loss = self.criterion(logits, labels, input_lengths.long(), target_lengths.long())
         cer = self.accuracy(logits, labels, attn_images)
-
         return loss, cer
 
     def configure_optimizers(self):

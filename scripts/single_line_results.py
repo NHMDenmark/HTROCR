@@ -2,8 +2,8 @@ import shutil
 import os
 import io
 
-RESULTS_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/results'
-OUTPUT_DIR = '/Users/linas/Studies/UCPH-DIKU/thesis/code/data/single_line_results'
+RESULTS_DIR = './data/results'
+OUTPUT_DIR = './data/single_line_results'
 
 def cp_dirs():
     #for dir in os.listdir(RESULTS_DIR):

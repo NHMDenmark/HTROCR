@@ -4,7 +4,7 @@
         "emunch": null,
         "mmd": null,
         "retro": null,
-        "transkribus": "/home/kfx882/studies/NHMD-digitisation/data/danish/aarhus/Brabrand-Aarslev_1841-1849_side_1-142"
+        "transkribus": "./data/danish/aarhus/Brabrand-Aarslev_1841-1849_side_1-142"
     },
 
     "db_collection": {
@@ -51,5 +51,5 @@
         "/home/kfx882/studies/train_db/data/training_data/fine-tune-machine-text-tt":-1
     },
 
-    "db_path": "/home/kfx882/studies/NHMD-digitisation/data/NHMD_train_final"
+    "db_path": "./data/NHMD_train_final"
 }

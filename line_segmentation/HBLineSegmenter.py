@@ -1,15 +1,7 @@
 from line_segmentation.LineSegmenter import LineSegmenter
 import numpy as np
-from scipy.ndimage import grey_dilation
-from scipy import ndimage
-from skimage.segmentation import watershed
-from skimage.feature import peak_local_max
-from skimage.measure import regionprops, find_contours
-from scipy.ndimage import binary_fill_holes
-from skimage.filters import threshold_otsu
 from PIL import Image, ImageDraw
 from scipy.spatial import ConvexHull
-from line_segmentation.util import get_point_neighbors
 from skimage.color import rgb2gray
 
 # Height Based Line Segmenter

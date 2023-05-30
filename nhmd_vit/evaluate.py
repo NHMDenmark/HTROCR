@@ -1,32 +1,28 @@
 import torch
 import os
 from tqdm import tqdm
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-# from nhmd_vit.VitCTC import ViTCTC
-from VitCTC import ViTCTC
-# import nhmd_vit.utils.device as devutils
-import utils.device as devutils
+from nhmd_vit.VitCTC import ViTCTC
+import nhmd_vit.utils.device as devutils
 from itertools import groupby
-# from nhmd_vit.data_processors.nhmd_datamodule import NHMDDataModule
-from data_processors.nhmd_datamodule import NHMDDataModule
-# from nhmd_vit.nhmdtokenizer import NHMDTokenizer
-from nhmdtokenizer import NHMDTokenizer
+from nhmd_vit.data_processors.nhmd_datamodule import NHMDDataModule
+from nhmd_vit.nhmdtokenizer import NHMDTokenizer
 from transformers import RobertaTokenizer
 from torchmetrics import CharErrorRate, WordErrorRate
 import numpy as np
 
-# os.environ["CUDA_VISIBLE_DEVICES"]="0"
 DATASET_PATH = "../unilm/trocr/NHMD_GT"
 CHECKPOINT_PATH = "./nhmd_vit/saved_models/"
 device = devutils.default_device()
+
 # run_name = 'TROCR_beit_base_271k'
 # cp_file = 'TROCR_beit_base_271k_final.ckpt'
+
 # run_name = 'NHMD_deit_small_271k'
 # cp_file = 'deit_small.ckpt'
+
 # run_name = 'TROCR_beit_large_271k'
 # cp_file = 'TROCR_beit_large_271k_final.ckpt'
+
 run_name = 'TROCR_deit_small_271k_trocrinit'
 cp_file = 'TROCR_deit_small_271k_trocrinit_final.ckpt'
 

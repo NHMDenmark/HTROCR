@@ -10,6 +10,10 @@ from skimage.color import rgb2gray
 import numpy as np
 import json
 
+"""
+Test script to play around with segmenations.
+Use 'fire' for argument parsing. See their documentation for details.
+"""
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
     selector = providers.Selector(

@@ -2,7 +2,7 @@ from transformers import AutoConfig, AutoModelForCausalLM, AutoModel, VisionEnco
 from TrOCREDProcessor import get_processor
 
 def fine_tune_model(encoder, decoder, base_arch, tokenizer_name):
-    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(encoder, decoder) #("./out/nhmd_small_e", "./out/nhmd_small_d")
+    model = VisionEncoderDecoderModel.from_encoder_decoder_pretrained(encoder, decoder)
 
     processor = get_processor(base_arch, tokenizer_name)
     
@@ -22,6 +22,7 @@ def fine_tune_model(encoder, decoder, base_arch, tokenizer_name):
     return model, processor
 
 def generate_model(encoder, decoder_name, processor_name, max_length):
+    "Load from encoder and decoder separately"
     decoder_config = AutoConfig.from_pretrained(decoder_name)
     decoder_config.max_length = max_length
     decoder_config.is_decoder = True
@@ -50,6 +51,7 @@ def generate_model(encoder, decoder_name, processor_name, max_length):
     return model, processor
 
 def generate_model_full(model_name, processor_name, max_length):
+    "Load full config"
     model = VisionEncoderDecoderModel.from_pretrained(model_name)
 
     processor = get_processor(processor_name)
@@ -68,11 +70,3 @@ def generate_model_full(model_name, processor_name, max_length):
     model.config.length_penalty = 2.0
     model.config.num_beams = 4
     return model, processor
-
-
-# model,processor = generate_model_full("microsoft/trocr-base-handwritten","microsoft/trocr-base-handwritten", 300)
-# #model = VisionEncoderDecoderModel.from_pretrained('microsoft/trocr-base-handwritten')
-# print(model.config.num_beams)
-# print(model.config.eos_token_id)
-# print(model.config.length_penalty)
-# print(model.config.max_length)

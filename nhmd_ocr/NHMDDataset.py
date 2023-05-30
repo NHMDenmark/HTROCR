@@ -30,7 +30,6 @@ class NHMDDataset(Dataset):
         df.rename(columns={0: "file_name", 1: "text"}, inplace=True)
         if len(df.columns) > 2:
             del df[2]
-#        df['file_name'] = df['file_name'].apply(lambda x: x + 'g' if x.endswith('jp') else x)
         self.data = df
         print(f'Dataset {dbtype} loaded. Size: {len(self.data)}')
         self.max_length = max_length
@@ -69,8 +68,8 @@ class NHMDDataset(Dataset):
                                         padding="max_length",
                                         max_length=self.max_length,
                                         truncation=True).input_ids
-        # print()
         labels = np.array(labels)
+
         # important: make sure that PAD tokens are ignored by the loss function
         labels[labels == self.processor.tokenizer.pad_token_id] = -100
         encoding = {

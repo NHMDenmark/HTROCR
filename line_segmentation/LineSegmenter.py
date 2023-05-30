@@ -2,8 +2,6 @@ import json
 from line_segmentation.BaselineBuilder import BaselineBuilder
 from abc import ABC, abstractmethod
 
-from skimage.color import rgb2gray
-
 class LineSegmenter(ABC):
     def __init__(self, path):
         with open(path) as f:
