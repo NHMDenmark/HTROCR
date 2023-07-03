@@ -7,9 +7,9 @@ import torch
 
 
 class VitTranscriber(Transcriber):
-    def __init__(self, path='./transcriber/config.json'):
+    def __init__(self, path):
         super().__init__(path)
-        self.model = ViTCTC.load_from_checkpoint(self.config['model'])
+        self.model = ViTCTC.load_from_checkpoint(self.config['transcription_model_weight_path'])
         self.maxlen = 100
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 

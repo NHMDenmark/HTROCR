@@ -1,9 +1,12 @@
+import os
+# Ignore TF info messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 import tensorflow as tf
 import numpy as np
 
 class Predictor(object):
     def __init__(self, params):
-        with tf.io.gfile.GFile(params['model_weight_path'], "rb") as f:
+        with tf.io.gfile.GFile(params['baseline_model_weight_path'], "rb") as f:
             graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
         with tf.Graph().as_default() as graph:
@@ -12,7 +15,7 @@ class Predictor(object):
                 input_map=None,
                 return_elements=None,
                 name="",
-                op_dict=None,
+                # op_dict=None,
                 producer_op_list=None
             )
         self.graph = graph

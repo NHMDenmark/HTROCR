@@ -12,7 +12,7 @@ from line_segmentation.util import get_point_neighbors
 from skimage.color import rgb2gray
 
 class PreciseLineSegmenter(LineSegmenter):
-    def __init__(self, path="./line_segmentation/config/default.json"):
+    def __init__(self, path):
         super().__init__(path)
 
     def __convex_hull_polygon(self, polygon_set):
@@ -30,6 +30,7 @@ class PreciseLineSegmenter(LineSegmenter):
             y -= miny
             x -= minx
             column=[[x,y]]
+            # Form a column using neighbours from the same line
             for nv in nvs:
                 if tuple(nv) in list(Si.keys()):
                     column.append([nv[1]-minx, nv[0]-miny])
@@ -38,10 +39,15 @@ class PreciseLineSegmenter(LineSegmenter):
             dx, dy = np.cos(theta), -np.sin(theta)
             height = 0
             stop_criteria = 0
-            # Go upwards from the baseline until the border of bounding box is reached
-            while int(column[0][0]) != end_point[0] and int(column[0][1]) != end_point[1]\
-and int(column[0][0]) < bbox.shape[1] and int(column[0][1]) < bbox.shape[0]\
-and int(column[0][0]) > 0 and int(column[0][1]) > 0:
+            # Go upwards from the baseline until the end goal is reached
+            while int(column[0][0]) != end_point[0] and int(column[0][1]) != end_point[1]:
+                # Additionally check if any neighbour has reached the border
+                for p in column:
+                    if int(p[0]) >= bbox.shape[1] or int(p[1]) >= bbox.shape[0] or int(p[0]) <= 0 or int(p[1]) <= 0:
+                        stop_criteria = -1
+                        break
+                if stop_criteria == -1:
+                    break
                 exists = any([bbox[int(p[1]), int(p[0])] for p in column])
                 if exists:
                     height += 1
@@ -69,11 +75,11 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
             p1 = p[1]
             p0 -= miny
             p1 -= minx
-            pixels = 10
+            pixels = self.config['min_textline_height']
             start_point = (p1,p0)
             polygon_set.append(start_point)
             angle_rad += np.pi/2
-            end_point = (int(p1 + np.cos(angle_rad) * int(max(height,pixels))), int(p0 - np.sin(angle_rad) * int(max(height, pixels))))
+            end_point = (int(p1 + np.cos(angle_rad) * int(max(height, pixels))), int(p0 - np.sin(angle_rad) * int(max(height, pixels))))
             polygon_set.append(end_point)
         hull = ConvexHull(polygon_set)
         sorted_points = [tuple(polygon_set[i]) for i in hull.vertices]
@@ -88,11 +94,10 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
         """
         dilated = self.__add_core_region(bbox, baseline, minx, miny, height)
         dilated = grey_dilation(dilated, footprint=np.ones((3, 3)))
-        dist_transform = ndimage.distance_transform_edt(dilated)
         markers, _ = ndimage.label(dilated)
-        return dilated, watershed(-dist_transform, markers, mask=dilated)
+        return dilated, markers
 
-    def __get_line_bbox(self, Si):
+    def __get_line_bbox(self, Si, img):
         """
         Generates oversized bounding box for precise noise elimination
         """
@@ -102,29 +107,33 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
         for _, v in Si.items():
             sum_of_dists += v[1]
             min_dist = min(min_dist, v[1])
-        mean_dist = sum_of_dists/len(Si)
         for p, (angle_rad, _) in Si.items():
-            polygon_set.append(p)
-            angle_rad += np.pi/2
-            end_point = (int(p[0] - np.sin(angle_rad) * int(mean_dist)), int(p[1] + np.cos(angle_rad) * int(mean_dist)))
-            polygon_set.append(end_point)
+            start_point = (p[0], p[1])
+            # extend point in direction orthogonally bellow the baseline 
+            descender_point = (int(start_point[0] - np.sin(angle_rad-np.pi/2) * int(20)), int(start_point[1] + np.cos(angle_rad-np.pi/2) * int(20)))
+            polygon_set.append(descender_point)
+            # extend point in direction orthogonally above the baseline
+            ascender_point = (int(start_point[0] - np.sin(angle_rad+np.pi/2) * int(min_dist)), int(start_point[1] + np.cos(angle_rad+np.pi/2) * int(min_dist)))
+            polygon_set.append(ascender_point)
         sorted_points = self.__convex_hull_polygon(polygon_set)
-        minx = min(sorted_points[:,1])-10 if min(sorted_points[:,1])-10 > 0 else 0
-        maxx = max(sorted_points[:,1])+20
-        miny = min(sorted_points[:,0])-20 if min(sorted_points[:,0])-20 > 0 else 0
-        maxy = max(sorted_points[:,0])+20
+        minx = max(min(sorted_points[:,1])-5, 1)
+        maxx = min(max(sorted_points[:,1])+5, img.shape[1]-1)
+        miny = max(min(sorted_points[:,0])-5, 1)
+        maxy = min(max(sorted_points[:,0])+5, img.shape[0]-1)
         return minx, miny, maxx, maxy, int(min_dist)
 
-    def __merge_line_segments(self, img, baseline, watershed_segments):
+    def __merge_line_segments(self, img, baseline, segments):
         """ 
         Merges computed segments that are closest to baseline
         """
         segments_to_merge = []
+        region_props = regionprops(segments)
         for p in baseline:
             min_dist = np.inf
-            conv_hull = []
-            for region in regionprops(watershed_segments):
+            conv_hull = None
+            for region in region_props:
                 minr, minc, maxr, maxc = region.bbox
+                # find closest x and y values to the corresponding p coords.
                 closest_x = max(minc, min(p[1], maxc))
                 closest_y = max(minr, min(p[0], maxr))
                 closest_point = [closest_x, closest_y]
@@ -184,17 +193,20 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
         mask_array = np.array(mask)
         masked_image = np.ones_like(bbox_img)*average_color
         masked_image[mask_array] = bbox_img[mask_array]
-        masked_image = masked_image[int(np.min(points[:,0])):int(np.max(points[:,0])), int(np.min(points[:,1])):int(np.max(points[:,1]))]
-        return masked_image
+        y1, y2, x1, x2 = (int(np.min(points[:,0])), int(np.max(points[:,0])), int(np.min(points[:,1])), int(np.max(points[:,1]))) 
+        masked_image = masked_image[y1:y2, x1:x2]
+        return masked_image, y1, y2, x1, x2
 
     def segment_lines(self, img_path):
         """
         Main driver. Returns segmentation images, contour coordinates (for xmls),
         wrapping bounding box coordinates (region_coords), the image scale value.
         """
-        scale = 0.33
+        scale = self.config["downsize_scale"]
         orig = Image.open(img_path)
         width, height = orig.size
+        if self.config["crop_ucph_border"]:
+            orig = orig.crop((0, 0, width-self.config["crop_ucph_border_size"], height))
         new_size = (int(width * scale), int(height * scale))
         resized_img = orig.resize(new_size)
         img = rgb2gray(np.array(resized_img))
@@ -202,9 +214,9 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
         segmentations = []
         polygons = []
         region_coords = []
-        for i in range(1, len(clusters)):
+        for i in range(len(clusters)):
             Si = clusters[i]
-            minx, miny, maxx, maxy, min_region = self.__get_line_bbox(Si)
+            minx, miny, maxx, maxy, min_region = self.__get_line_bbox(Si, img)
             label = img[miny:maxy, minx:maxx]
             thresh = threshold_otsu(label)
             thresholded = label < thresh
@@ -212,16 +224,20 @@ and int(column[0][0]) > 0 and int(column[0][1]) > 0:
             new_baseline = np.array(list(Si.keys()))
             new_baseline[:,1] -= minx 
             new_baseline[:,0] -= miny
-            dilated, watershed_segments = self.__separate_lines(Si, minx, miny, thresholded, height)
-            binary_image, polygon_points = self.__merge_line_segments(dilated, new_baseline, watershed_segments)
+            dilated, segments = self.__separate_lines(Si, minx, miny, thresholded, height)
+            binary_image, polygon_points = self.__merge_line_segments(dilated, new_baseline, segments)
             filtered_shape = self.__remove_outliers(binary_image, dilated, polygon_points)
             contour = self.__trace_contour(filtered_shape) - 5
-            bbox = self.__generate_bbox(label, contour)
+            bbox, y1, y2, x1, x2 = self.__generate_bbox(label, contour)
+            x1 = (x1+minx)/scale
+            x2 = (x2+minx)/scale
+            y1 = (y1+miny)/scale
+            y2 = (y2+miny)/scale
             segmentations.append(bbox)
-            polygons.append(contour)
-            max_x = max(contour[:,1])
-            min_x = min(contour[:,1])
-            max_y = max(contour[:,0])
-            min_y = min(contour[:,0])
+            polygons.append([[x1,y1], [x1,y2], [x2,y2], [x2,y1]])
+            max_x = (max(contour[:,1]) + minx)/scale
+            min_x = (min(contour[:,1]) + minx)/scale
+            max_y = (max(contour[:,0]) + miny)/scale
+            min_y = (min(contour[:,0]) + miny)/scale
             region_coords.append([min_x, max_x, min_y, max_y])
         return segmentations, polygons, clusters, region_coords, scale

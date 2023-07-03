@@ -1,12 +1,8 @@
 import numpy as np
-from scipy.ndimage import binary_erosion, binary_opening
 from scipy.spatial import Delaunay
 from skimage.morphology import skeletonize
 from line_segmentation.predictor.inference import Predictor
 from line_segmentation.util import get_point_neighbors
-from PIL import Image
-from multiprocessing import Pool
-from functools import partial
 
 class BaselineBuilder():
     def __init__(self, config):
@@ -106,7 +102,7 @@ class BaselineBuilder():
         # max_val = max(L[:,1])
         max_val = L[0,1]
         # L = np.array([l for l in L if l[1]/max_val > 0.4])
-        L = L[L[:, 1]/max_val > 0.4]
+        L = L[L[:, 1]/max_val > self.config["neighbour_connectivity_ratio"]]
         if len(L) == 1:
             e = L[0,0]
         else:
@@ -163,7 +159,7 @@ class BaselineBuilder():
             if projection != -1:
                 break
         if projection == -1:
-            return 120
+            return self.config["fixed_interline_dist"]
         return projection
 
     def __L2_norm(self, p, q):
@@ -242,12 +238,15 @@ class BaselineBuilder():
                     P_star[p_idx] = union_set
                     P_star = self.__remove_cfpl(Sj, P_star)
                 # Otherwise - ignore since both points are in the same cluster
+        # Remove clutter cluster from segmentations
+        P_star = P_star[1:]
+        # Remove possible plant noise that contan less than 5 pixels in the baseline
         P_star = [set_i for set_i in P_star if len(set_i) >= 5]
         return P_star
 
     def run(self, img):
         B = self.predictor.run(img)
-        Bb = (B > 0.1) * 1
+        Bb = (B > self.config['superpixel_confidence_thresh']) * 1
         Bs = skeletonize(Bb)
         S, SI = self.__select_superpixels(B, Bs)
         if len(S) == 0 or len(S) < 3:

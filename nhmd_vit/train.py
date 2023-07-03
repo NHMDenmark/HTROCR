@@ -59,9 +59,7 @@ def train_hybrid(**kwargs):
                          fast_dev_run=False)
 
 
-    trainer.logger._default_hp_metric = None # Optional logging argument that we don't need
-
-    # Check whether pretrained model exists. If yes, load it and skip training
+    trainer.logger._default_hp_metric = None
     pretrained_filename = os.path.join(root_dir, cp_file)
     if os.path.isfile(pretrained_filename):
         print("Found pretrained model, loading...")

@@ -1,4 +1,0 @@
-{
-    "model": "nhmd_ocr/nhmd_out/base_full/nhmd_base_full_final",
-    "processor": "microsoft/trocr-base-handwritten"
-}

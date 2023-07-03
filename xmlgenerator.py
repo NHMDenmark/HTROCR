@@ -38,10 +38,10 @@ def generate_xml(filename, polygon_coords, baseline_coords, region_coords, scale
         
         # TODO: Check x and y coordinate order. It might be wrong! Should be 'x1,y1 x2,y2'
         coords = etree.SubElement(text_line, "Coords", points=' '.join([f'{int(c[1])},{int(c[0])}' for c in polygon_coords[i]]))
-        baseline = etree.SubElement(text_line, "Baseline", points=' '.join([f'{int(c[1])},{int(c[0])}' for c in baseline_coords[i]]))
+        baseline = etree.SubElement(text_line, "Baseline", points=' '.join([f'{int(c[1]/scale)},{int(c[0]/scale)}' for c in baseline_coords[i]]))
         text_equiv = etree.SubElement(text_line, "TextEquiv")
         unicode_text = etree.SubElement(text_equiv, "Unicode")
         unicode_text.text = transcription[i]
 
     tree = etree.ElementTree(root)
-    tree.write(os.path.join(outdir, "output.xml"), pretty_print=True)
+    tree.write(os.path.join(outdir, f"{filename[:-4]}.xml"), pretty_print=True)

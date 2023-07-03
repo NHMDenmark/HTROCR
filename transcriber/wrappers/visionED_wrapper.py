@@ -5,13 +5,17 @@ from PIL import Image
 import numpy as np
 import torch
 import albumentations as A
+from transformers.utils.logging import set_verbosity_error
 
 class VisionEncoderDecoderTranscriber(Transcriber):
-    def __init__(self, path='./transcriber/config.json'):
+    def __init__(self, path):
         super().__init__(path)
+        # Suppress image processor warnings - 
+        # https://discuss.huggingface.co/t/error-finding-processors-image-class-loading-based-on-pattern-matching-with-feature-extractor/31890/6.
+        set_verbosity_error()
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        self.model = VisionEncoderDecoderModel.from_pretrained(self.config['model']).to(self.device)
-        self.processor = TrOCRProcessor.from_pretrained(self.config['processor'])
+        self.processor = TrOCRProcessor.from_pretrained(self.config['transcription_img_processor'])
+        self.model = VisionEncoderDecoderModel.from_pretrained(self.config['transcription_model_weight_path']).to(self.device)
         self.maxlen = 300
 
     def transcribe(self, img):

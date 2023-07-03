@@ -42,11 +42,11 @@ class NHMDPipeline(object):
 
         lscontainer = LineSegmenterContainer()
         lscontainer.config.from_json(config_path)
-        self.segmenter = lscontainer.selector()
+        self.segmenter = lscontainer.selector(config_path)
 
         tcontainer = TranscriberContainer()
         tcontainer.config.from_json(config_path)
-        self.transcriber = tcontainer.selector()
+        self.transcriber = tcontainer.selector(config_path)
 
     def evaluate_baseline(self, path, out_dir='./out'):
         """
@@ -113,7 +113,7 @@ class NHMDPipeline(object):
 
         if self.out_type == 'txt':
             txt_predictions = [f'{pred["file"]}\t{pred["pred"]}\n'for pred in predictions]
-            with open(os.path.join(self.out_dir, 'result.txt'), 'w') as f:
+            with open(os.path.join(self.out_dir, f'{id}_result.txt'), 'w') as f:
                 f.write(''.join(txt_predictions))
         elif self.out_type == 'xml':
             filename = path.split('/')[-1]
