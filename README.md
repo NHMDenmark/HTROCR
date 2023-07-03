@@ -24,9 +24,8 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-    </li>
+    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#about-the-project">Recommendations for improvement</a></li>
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
@@ -35,10 +34,11 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#usage">Known issues</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#acknowledgments">References</a></li>
   </ol>
 </details>
 
@@ -48,9 +48,14 @@
 
 ![Product Name Screen Shot][pipeline-screenshot]
 
-NHMD herbarium sheet digitisation pipeline. Solution is based on a 2 stage procedure. First, the text line baselines are detected within the document by relying on the tranformed ARU-Net baseline detector [[1]](#1) pipeline. Baselines are then transformed into text line segmentations. The resulting lines may have ascender and descender features from other lines, however, it has been shown by Romero et al. [[2]](#2) that these have little influence. Obtained images are then forwarded to transcription module, where different transcription variants were proposed. The best performing method is based on TrOCR BASE [[3]](#3) configuration.
+NHMD herbarium sheet digitisation pipeline. Solution is based on a 2 stage procedure. First, text line baselines are detected within the document by relying on the tranformed ARU-Net baseline detector [[1]](#1) pipeline. Baselines are then transformed into text line segmentations. The resulting images may have ascender and descender features from other lines, however, it has been shown by Romero et al. [[2]](#2) that these have little influence on the transcription performance. Obtained segmentations are then forwarded to transcription module, where different transcription variants were proposed. The best performing method is based on TrOCR BASE [[3]](#3) configuration.
 
-The project was done as part of MSc thesis: "Herbarium sheet label data digitisation using handwritten text recognition" at University of Copenhagen. Results for transcription module displayed 11.93% Character Error Rate performance on a custom 817 NHMD line sample dataset. However, depending on a document, an addition of a segmentation tool may reduce this performance due to incorrect segmentation.
+The project was done as part of MSc thesis: "Herbarium sheet label data digitisation using handwritten text recognition" at the University of Copenhagen. Results for transcription module displayed 11.93% Character Error Rate performance on a custom 817 NHMD line sample dataset. However, depending on a test document structure, an addition of a segmentation tool may reduce this performance due to incorrect segmentation.
+
+## Recommendations for improvement
+- Establish error handling protocol for GT test dataset. NHMD data is extremely complicated and even humans are unable to transcribe all of the samples. Currently, the test set contains some uncertainty, which is likely reflected in the final performance score.
+- Build an improved historical text synthetic handwritten text generation tool. The following repositories can get you started: https://github.com/ankanbhunia/Handwriting-Transformers (global and local text style synthesis) and https://github.com/herobd/handwriting_line_generation (global text style synthesis).
+- Try an external language model.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -63,8 +68,6 @@ The project was done as part of MSc thesis: "Herbarium sheet label data digitisa
 - Python 3.9
 
 ### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
 
 1. Clone the repo
    ```sh
@@ -98,11 +101,11 @@ _Below is an example of how you can instruct your audience on installing and set
    python run.py process_dir --path="./path/to/folder" --out_type="txt" --save_images=True --out_dir='./out'
   ```
 
-- Supported --out_types: "<i>txt</i>", "<i>xml</i>"
+- The supported <i>--out_types</i>: "<i>txt</i>", "<i>xml</i>"
 
-- Sample right border processing is not supported. If samples to be transcribed do not have this border - make sure to change the pipeline_config.json and set "crop_ucph_border" to <b>false</b>.
+- The right border of herbarium sheet samples is not supported under the processing pipeline due to significantly smaller text. If samples to be transcribed do not have this border - make sure to change the pipeline_config.json and set "crop_ucph_border" to <b>false</b>.
 
-- In the same pipeline_config.json processing parameters can be adjusted.
+- More processing parameters (discetization distance, pixel confidence threshold, border size, etc.) can be adjusted in pipeline_config.json.
 
 - Use command "evaluate_baseline(s)" instead of "process_image(dir)" to prepare predictions for accuracy evaluation using baseline evaluation scheme.
   ```sh
@@ -121,7 +124,7 @@ _Below is an example of how you can instruct your audience on installing and set
 
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the GPLv2 License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -138,8 +141,6 @@ Project Link: [https://github.com/LinasEin/NHMD-digitisation](https://github.com
 <!-- ACKNOWLEDGMENTS -->
 
 ## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
 
 - [RETRO](https://www.retrodigitalisering.dk/)
 
