@@ -35,7 +35,7 @@ def get_supported_font(fonts, text):
             print(font_name)
     return supported  
 
-def generate_lines(lines, type, text_type='en'):
+def generate_lines(lines):
     font_dir = 'fonts/{}'.format('all')
     machine_text_dir = os.path.join(TRAIN_DB_DIR, 'fine-tune-machine-text')
     fonts = [os.path.join(font_dir, p) 
@@ -65,14 +65,16 @@ def generate_lines(lines, type, text_type='en'):
 
 
 if __name__ == '__main__':
-    # generate_lines(collect_english_texts(), 'en', 'dk')
-    # generate_lines(collect_danish_texts(), 'dk', 'dk')
-    # generate_lines(collect_location_info(), 'coord', 'coord')
-    # with open("data/machine.txt", 'r') as r:
-    #     lines = r.readlines()
-    #     generate_lines(lines, '')
+    # generate_lines(collect_english_texts())
+    # generate_lines(collect_danish_texts())
+    generate_lines(collect_location_info())
+    with open("data/machine.txt", 'r') as r:
+        lines = r.readlines()
+        generate_lines(lines, '')
 
-    font_dir = 'fonts/{}'.format('all')
-    fonts = [os.path.join(font_dir, p) 
-            for p in os.listdir(font_dir) if os.path.splitext(p)[1] == ".ttf"]
-    get_supported_font(fonts,'')
+    # Tests to check which fonts support unique special characters:
+
+    # font_dir = 'fonts/{}'.format('all')
+    # fonts = [os.path.join(font_dir, p) 
+    #         for p in os.listdir(font_dir) if os.path.splitext(p)[1] == ".ttf"]
+    # get_supported_font(fonts,'')

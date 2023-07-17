@@ -50,18 +50,14 @@ def generate(config):
     im_files = os.listdir(image_path_dir)
     for index, subset in enumerate(db_collection):
         print("Running collection", index)
-#        if index < 37:
-#            continue
         subset_size = db_collection[subset]
-        f = 'gt_train.txt' #if index+1 != len(db_collection) else 'gt_train_full.txt'
+        f = 'gt_train.txt'
         with open(os.path.join(subset, f), 'r') as r:
             lines = r.readlines()
-#            if subset_size != -1:
-#                lines = random.sample(lines, subset_size)
-            collection_prefix = "d{}_".format(index) #if index+1 != len(db_collection) else ''
-#            if subset == "/home/kfx882/studies/train_db/generated_data/machine-text-coord" or subset == "/home/kfx882/studies/train_db/generated_data/machine-text-taxon":
-#            copy_images(lines, collection_prefix, subset, image_path_dir)
-            
+            if subset_size != -1:
+                lines = random.sample(lines, subset_size)
+            collection_prefix = "d{}_".format(index)
+            copy_images(lines, collection_prefix, subset, image_path_dir)
             collection_labels += [collection_prefix+l for l in lines if collection_prefix+l.split('\t')[0] in im_files]
     random.shuffle(collection_labels)
     val_set = random.sample(collection_labels, 10000)
@@ -72,7 +68,7 @@ def generate(config):
         w.write("".join(val_set))
 
 def prepare_line_level_images(config):
-    # Prepare line level images
+    # Prepare line level images from PAGE schema documents.
     emunch_path = config['transformers']['emunch']
     mmd_path = config['transformers']['mmd']
     retro_path = config['transformers']['retro']

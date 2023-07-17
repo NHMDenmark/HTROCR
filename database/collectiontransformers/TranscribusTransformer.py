@@ -52,7 +52,7 @@ class TranscribusTransformer(CollectionTransformer):
 
     def process_line_images_polygons(self, file, tr_output, lines_dir_path, root):
         """
-        Extracts polygons based on xml coordinates and 
+        Extracts polygons based on xml coordinates
         """
         img_to_read = os.path.join(root, file)
         pil_image = Image.open(img_to_read)
@@ -129,6 +129,8 @@ class TranscribusTransformer(CollectionTransformer):
                     file = files[i]
                     # Process only '.jpg' files
                     if file.endswith('.jpg'):
+                        # alternatively a slower, but more precise segmentation without upper, lower line noise: 
+                        # output = self.process_line_images_polygons(file, output, lines_dir_path, root)
                         output = self.process_line_images(file, output, lines_dir_path, root)
                 with open(os.path.join(gt_path, 'gt_train.txt'), 'w') as w:
                     w.write(output)

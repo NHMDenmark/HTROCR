@@ -3,10 +3,6 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <!-- <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a> -->
-
   <h3 align="center">NHMD Digitisation</h3>
 
   <p align="center">
@@ -34,7 +30,8 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#usage">Known issues</a></li>
+    <li><a href="#dataset">Generating training dataset</a></li>
+    <li><a href="#known-issues">Known issues</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
@@ -48,11 +45,14 @@
 
 ![Product Name Screen Shot][pipeline-screenshot]
 
-NHMD herbarium sheet digitisation pipeline. Solution is based on a 2 stage procedure. First, text line baselines are detected within the document by relying on the tranformed ARU-Net baseline detector [[1]](#1) pipeline. Baselines are then transformed into text line segmentations. The resulting images may have ascender and descender features from other lines, however, it has been shown by Romero et al. [[2]](#2) that these have little influence on the transcription performance. Obtained segmentations are then forwarded to transcription module, where different transcription variants were proposed. The best performing method is based on TrOCR BASE [[3]](#3) configuration.
+NHMD herbarium sheet digitisation pipeline. Solution is based on a 2 stage procedure. First, text line baselines are detected within the document by relying on the tranformed ARU-Net baseline detector [[1]](#1) pipeline. Baselines are then transformed into text line segmentations. For superpixel point clustering and subsequent line segmentation, interline distance measurement is computed. This is done with closest upper superpixel point projections (see the illustration bellow). The resulting images may have ascender and descender features from other lines, however, it has been shown by Romero et al. [[2]](#2) that these have little influence on the transcription performance. Obtained segmentations are then forwarded to transcription module, where different transcription variants were proposed. The best performing method is based on TrOCR BASE [[3]](#3) configuration.
+
+![interline][interline-screenshot]
 
 The project was done as part of MSc thesis: "Herbarium sheet label data digitisation using handwritten text recognition" at the University of Copenhagen. Results for transcription module displayed 11.93% Character Error Rate performance on a custom 817 NHMD line sample dataset. However, depending on a test document structure, an addition of a segmentation tool may reduce this performance due to incorrect segmentation.
 
 ## Recommendations for improvement
+
 - Establish error handling protocol for GT test dataset. NHMD data is extremely complicated and even humans are unable to transcribe all of the samples. Currently, the test set contains some uncertainty, which is likely reflected in the final performance score.
 - Build an improved historical text synthetic handwritten text generation tool. The following repositories can get you started: https://github.com/ankanbhunia/Handwriting-Transformers (global and local text style synthesis) and https://github.com/herobd/handwriting_line_generation (global text style synthesis).
 - Try an external language model.
@@ -114,6 +114,36 @@ The project was done as part of MSc thesis: "Herbarium sheet label data digitisa
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Generating training dataset
+
+Helper script for constructing training dataset can be found in <i>database/db_generator.py</i>. Generally, database follows the following structure. Line images are stored in image/ directory and their ground truth transcriptions are located in gt_train.txt, gt_valid.txt or gt_test.txt. These txt files have data separated with line breaks. Each entry contains an image file name followed by '\t' and corresponding transcription.
+
+<b>Generating text line samples from PAGE schema xmls:</b>
+
+1. In the <i>config/generator.json</i> under the "transformers.transkribus" entry specify path to PAGE schema documents. NOTE: It was assumed that the images from the PAGE schema directories are moved to <i>images/</i> directory and thus the folder structure should contain two directories: <i>images/</i> and <i>page/</i>.
+2. Run the following command to get text line segmentation crops:
+
+```sh
+ python db_generator.py -p "./config/generator.json" -l
+```
+
+<b>Generating machine printed text samples</b>
+
+For this purpose use open source software: https://github.com/Belval/TextRecognitionDataGenerator/tree/master. Example usage is presented in <i>database/synthetic_generator.py</i>
+
+<b>Generating handwritten text samples</b>
+
+For this purpose use open source software: https://github.com/herobd/handwriting_line_generation.
+
+<b>Grouping datasets together</b>
+
+Having collected samples from different sources, it is now time to merge them into a single training dataset collection. In <i>config/generator.json</i> under "db_collection" entry specify key-value pairs of full collection path and number of elements to include. '-1' suggests to include all. Also, specify "db_path" entry, which should state a path where to save the collection. Then,
+run the following:
+
+```sh
+ python db_generator.py -p "./config/generator.json" -d
+```
+
 ## Known issues
 
 - Rotated labels are not normalised before transcription.
@@ -162,3 +192,4 @@ M. Li, T. Lv, L. Cui, Y. Lu, D. A. F. FlorÃªncio, C. Zhang, Z. Li, and F. Wei, â
 
 [pipeline-screenshot]: resources/pipeline.png
 [pipeline-example]: resources/example.png
+[interline-screenshot]: resources/interline.png

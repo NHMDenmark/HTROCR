@@ -136,9 +136,9 @@ def collect_english_texts():
                     lines.append(" ".join(line))
                     line = [word]
             lines.append(" ".join(line))
-    #         collection = "\n".join(lines)
-    # with open("texts_en.txt", 'w') as w:
-    #     w.write(collection)
+            collection = "\n".join(lines)
+    with open("texts_en.txt", 'w') as w:
+        w.write(collection)
     return lines
 
 def collect_location_info(n=10000):
@@ -161,7 +161,8 @@ def collect_location_info(n=10000):
             latitude_deg, latitude_min))
     with open("coords_short.txt", 'w') as w:
             w.write('\n'.join(coord for coord in coordinates))
-    # return coordinates
+    return coordinates
+
 
 # collect_danish_texts()
 # collect_english_texts()
