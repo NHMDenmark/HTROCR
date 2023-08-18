@@ -3,11 +3,18 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <h3 align="center">NHMD Digitisation</h3>
+  <h3 align="center">NHMD Handwritten Text Recognition and OCR</h3>
 
-  <p align="center">
-    Historical label recognition of herbarium sheets from Natural History Museum of Denmark
+  <p align="Left">
+    This repository is a fork from the work by Linas Einikis
+    as part of his MSc. thesis at Department of Computer Science University of Copenhagen.
   </p>
+
+  <p align="Left">
+The project focuses on optical character recognition (OCR) with a special focus on historical handwritten text recognition (HTR).
+The application is historical label transcription of herbarium sheets from Natural History Museum of Denmark, University of Copenhagen.
+  </p>
+
 
   <p>
 
@@ -164,7 +171,7 @@ Distributed under the GPLv2 License. See `LICENSE.txt` for more information.
 
 Linas Einikis - einikis.lin@gmail.com
 
-Project Link: [https://github.com/LinasEin/NHMD-digitisation](https://github.com/LinasEin/NHMD-digitisation)
+Original project Link: [https://github.com/LinasEin/NHMD-digitisation](https://github.com/LinasEin/NHMD-digitisation)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
