@@ -11,6 +11,7 @@ out
 out1
 wandb
 saved_models
+ocr_models
 nhmd_out
 EMNIST
 .idea

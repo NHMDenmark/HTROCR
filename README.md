@@ -74,6 +74,7 @@ The project was done as part of MSc thesis: "Herbarium sheet label data digitisa
 
 - Python 3.9
 
+
 ### Installation
 
 1. Clone the repo
@@ -85,7 +86,8 @@ The project was done as part of MSc thesis: "Herbarium sheet label data digitisa
    conda create -n test_env python=3.9
    pip install -r requirements.txt
    ```
-3. Execute pipelne using run.py script
+3. Install model files in a directory called `ocr_models` inside the base directory of the cloned project.
+4. Execute pipeline using `run.py` script
    ```sh
    python run.py process_image --path="./path/to/image.jpg" --out_type="txt" --save_images=True --out_dir='./out'
    ```
