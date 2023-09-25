@@ -12,7 +12,7 @@ Image(s) needs to be either .jpg or .png. A trained model needs to be provided.
 In an environment with python install the package
 
 ```bash
-pip install git+https://github.com/Baeist/NHMD-digitisation.git@package#egg=htrocr
+pip install git+https://github.com/NHMDenmark/HTROCR.git@package#egg=htrocr
 ```
 
 Then enter python mode
