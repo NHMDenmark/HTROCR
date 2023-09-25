@@ -1,0 +1,37 @@
+Metadata-Version: 2.1
+Name: htrocr
+Version: 0.1
+Summary: Package for reading handwritten documents.
+Author: Linas Einikis
+License: GNU
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: GNU Lesser General Public License
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Image Processing :: Linguistic
+Requires-Python: >=3.9
+License-File: LICENSE
+Requires-Dist: albumentations>=1.3.0
+Requires-Dist: dependency-injector>=4.41.0
+Requires-Dist: pybind11
+Requires-Dist: fire>=0.5.0
+Requires-Dist: Levenshtein>=0.20.8
+Requires-Dist: lightning-utilities>=0.8.0
+Requires-Dist: lxml>=4.9.2
+Requires-Dist: matplotlib>=3.7.1
+Requires-Dist: numpy>=1.23.5
+Requires-Dist: pandas>=1.5.2
+Requires-Dist: pytorch-lightning>=2.0.2
+Requires-Dist: Pillow>=9.3.0
+Requires-Dist: scikit-image>=0.21.0
+Requires-Dist: scikit-learn>=1.2.2
+Requires-Dist: scipy>=1.9.3
+Requires-Dist: tensorflow>=2.13.0
+Requires-Dist: timm>=0.5.4
+Requires-Dist: torch>=1.13.1
+Requires-Dist: torchaudio>=0.13.1
+Requires-Dist: torchmetrics>=0.11.4
+Requires-Dist: torchvision>=0.14.1
+Requires-Dist: tqdm
+Requires-Dist: transformers>=4.26.0
+Requires-Dist: trdg>=1.8.0
+Requires-Dist: wandb>=0.14.0

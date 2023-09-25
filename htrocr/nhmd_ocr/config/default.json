@@ -1,0 +1,21 @@
+
+{
+    "encoder_name": "microsoft/beit-base-patch16-384",
+    "decoder_name": "xlm-roberta-base",
+    "max_len": 300,
+    "num_decoder_layers": 2,
+    "augment": false,
+    "data_path": "../data/NHMD_train_final",
+    "output_dir": "./nhmd_out/base_roberta",
+    "weight_save_strategy": "steps",
+    "evaluation_strategy": "steps",
+    "train_batch_size": 8,
+    "eval_batch_size": 8,
+    "fp16": true,
+    "fp16_eval": true,
+    "dataloader_workers": 16,
+    "logging_steps": 100,
+    "save_steps": 10000,
+    "eval_steps": 10000,
+    "train_epochs": 6
+}

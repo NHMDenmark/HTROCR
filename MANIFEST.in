@@ -1,0 +1,3 @@
+include htrocr\line_segmentation\predictor\net\*.pb
+include htrocr\*.py
+include htrocr\*.json
